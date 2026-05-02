@@ -9,8 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  http: ^1.2.1
+  flutter_svg: ^2.0.10+1
   flutter_map: ^6.1.0
   latlong2: ^0.9.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -18,3 +21,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/floodaid_logo.svg
+  
