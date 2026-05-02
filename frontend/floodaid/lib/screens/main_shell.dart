@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../map/map_screen.dart';
 import '../chat/chat_screen.dart';
 
 class MainShell extends StatefulWidget {
@@ -12,7 +13,7 @@ class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
   final List<Widget> _screens = [
-    const Scaffold(body: Center(child: Text('Map coming soon'))),
+    const MapScreen(),
     const ChatScreen(),
     const Scaffold(body: Center(child: Text('Resources coming soon'))),
   ];
