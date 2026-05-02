@@ -1,0 +1,72 @@
+{
+  "map_bounds": {
+    "south": 44.55,
+    "north": 44.75,
+    "west": -124.1,
+    "east": -123.8
+  },
+  "environmental_risk_packets": [
+    {
+      "area_id": "11490000",
+      "name": "Yaquina River at Newport, OR",
+      "river_name": "Yaquina River",
+      "center": {
+        "lat": 44.6367,
+        "lng": -124.0535
+      },
+      "raw_packet": {
+        "usgs": {
+          "station_id": "11490000",
+          "gage_height_ft": 9.8,
+          "flood_stage_ft": 12.0,
+          "streamflow_cfs": 5600,
+          "percentile_rank": 68,
+          "water_level_trend": "rising"
+        },
+        "water_services": {
+          "station_id": "11490000",
+          "streamflow_status": "above_normal",
+          "percent_difference": 40,
+          "anomaly_level": "moderate",
+          "notes": "Coastal runoff and recent storms increasing flow in the Yaquina River near Newport."
+        },
+        "weather": {
+          "weather_alert": "flood_watch",
+          "rain_forecast_inches": 1.6,
+          "rain_next_6hr_inches": 0.6,
+          "storm_probability": 0.45,
+          "forecast_summary": "Coastal storm bringing moderate rainfall and elevated river levels."
+        }
+      }
+    }
+  ],
+  "risk_regions": [
+    {
+      "area_id": "11490000",
+      "name": "Yaquina River at Newport, OR",
+      "river_name": "Yaquina River",
+      "risk_level": "HIGH",
+      "risk_score": 85,
+      "color": "red",
+      "center": {
+        "lat": 44.6367,
+        "lng": -124.0535
+      },
+      "radius_miles": 25,
+      "reasons": [
+        "USGS reports current gage height at 9.8 ft (81.6% of flood stage) with a rising trend.",
+        "Water Services indicates above normal streamflow with a moderate anomaly (40% above normal).",
+        "Weather.gov has issued a flood watch, forecasting 1.6 inches of rain and a coastal storm bringing elevated river levels."
+      ],
+      "data_sources_used": [
+        "USGS",
+        "Water Services",
+        "Weather.gov"
+      ]
+    }
+  ],
+  "debug_steps": [
+    "Collected environmental data for 1 gauges.",
+    "Gemini analyzed packets and classified flood risk regions."
+  ]
+}
