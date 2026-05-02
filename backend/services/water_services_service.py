@@ -48,6 +48,13 @@ _MOCK_STREAMFLOW: dict[str, dict[str, Any]] = {
         "anomaly_level": "low",
         "notes": "Flow regulated by upstream dam releases; no anomalies detected.",
     },
+    "11490000": {
+        "station_id": "11490000",
+        "streamflow_status": "above_normal",
+        "percent_difference": 40,
+        "anomaly_level": "moderate",
+        "notes": "Coastal runoff and recent storms increasing flow in the Yaquina River near Newport.",
+    },
 }
 
 

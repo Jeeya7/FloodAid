@@ -50,6 +50,13 @@ _MOCK_GAUGES = [
         "lng": -111.9873,
         "river_name": "Colorado River",
     },
+    {
+        "station_id": "11490000",
+        "name": "Yaquina River at Newport, OR",
+        "lat": 44.6367,
+        "lng": -124.0535,
+        "river_name": "Yaquina River",
+    },
 ]
 
 # Mock water-level readings per station.
@@ -99,6 +106,14 @@ _MOCK_WATER_DATA: dict[str, dict[str, Any]] = {
         "streamflow_cfs": 14_200,
         "percentile_rank": 30,
         "water_level_trend": "steady",
+    },
+    "11490000": {
+        "station_id": "11490000",
+        "gage_height_ft": 9.8,
+        "flood_stage_ft": 12.0,
+        "streamflow_cfs": 5_600,
+        "percentile_rank": 68,
+        "water_level_trend": "rising",
     },
 }
 

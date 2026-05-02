@@ -64,6 +64,17 @@ _MOCK_WEATHER: list[dict[str, Any]] = [
         "storm_probability": 0.10,
         "forecast_summary": "Clear and dry conditions expected for the next 48 hours.",
     },
+    # Yaquina River / Newport, OR — coastal moderate rain
+    {
+        "_lat_center": 44.6367,
+        "_lng_center": -124.0535,
+        "_radius_deg": 1.0,
+        "weather_alert": "flood_watch",
+        "rain_forecast_inches": 1.6,
+        "rain_next_6hr_inches": 0.6,
+        "storm_probability": 0.45,
+        "forecast_summary": "Coastal storm bringing moderate rainfall and elevated river levels.",
+    },
 ]
 
 _DEFAULT_WEATHER: dict[str, Any] = {
