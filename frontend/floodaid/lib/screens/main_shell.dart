@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../chat/chat_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -12,7 +13,7 @@ class _MainShellState extends State<MainShell> {
 
   final List<Widget> _screens = [
     const Scaffold(body: Center(child: Text('Map coming soon'))),
-    const Scaffold(body: Center(child: Text('Chat coming soon'))),
+    const ChatScreen(),
     const Scaffold(body: Center(child: Text('Resources coming soon'))),
   ];
 
