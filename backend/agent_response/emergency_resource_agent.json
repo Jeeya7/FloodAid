@@ -1,0 +1,111 @@
+{
+  "user_location": {
+    "lat": 44.63,
+    "lng": -124.05
+  },
+  "lat": 44.63,
+  "lng": -124.05,
+  "radius_miles": 10,
+  "debug_steps": [
+    "resource_collection_step: fetched 10 resources (food + hospitals + shelters) within 10 miles.",
+    "resource_safety_agent: scored 10 resources. Error: Expecting property name enclosed in double quotes: line 58 column 27 (char 2336)",
+    "availability_agent: evaluated 10 resources. Error: none",
+    "distance_ranking_step: computed haversine distances and normalised scores.",
+    "resource_synthesis_agent: best_option_id=food-001. Error: Unterminated string starting at: line 55 column 20 (char 1846)",
+    "response_formatter_step: built final JSON with 10 ranked resources."
+  ],
+  "recommended_resource": {
+    "id": "food-001",
+    "name": "Newport Community Food Pantry",
+    "type": "food",
+    "lat": 44.6368,
+    "lng": -124.0535,
+    "distance_miles": 0.5,
+    "status": "open",
+    "reasoning": "Synthesis unavailable; ranked by combined score."
+  },
+  "ranked_resources": [
+    {
+      "id": "shelter-001",
+      "name": "Newport High School Evacuation Shelter",
+      "type": "shelter",
+      "distance_miles": 0.41,
+      "overall_score": 0.667,
+      "status": "open"
+    },
+    {
+      "id": "food-001",
+      "name": "Newport Community Food Pantry",
+      "type": "food",
+      "distance_miles": 0.5,
+      "overall_score": 0.64,
+      "status": "open"
+    },
+    {
+      "id": "food-003",
+      "name": "Oregon Coast Emergency Food Bank",
+      "type": "food",
+      "distance_miles": 0.5,
+      "overall_score": 0.64,
+      "status": "open"
+    },
+    {
+      "id": "hosp-001",
+      "name": "Samaritan Pacific Communities Hospital",
+      "type": "hospital",
+      "distance_miles": 0.56,
+      "overall_score": 0.6395,
+      "status": "open"
+    },
+    {
+      "id": "shelter-003",
+      "name": "Coastal Community Warming Center",
+      "type": "shelter",
+      "distance_miles": 0.39,
+      "overall_score": 0.638,
+      "status": "open"
+    },
+    {
+      "id": "hosp-003",
+      "name": "Lincoln County Health Clinic",
+      "type": "hospital",
+      "distance_miles": 0.35,
+      "overall_score": 0.615,
+      "status": "open"
+    },
+    {
+      "id": "food-002",
+      "name": "Lincoln County Meal Site",
+      "type": "food",
+      "distance_miles": 0.78,
+      "overall_score": 0.5385,
+      "status": "open"
+    },
+    {
+      "id": "shelter-002",
+      "name": "Lincoln Events Center Emergency Shelter",
+      "type": "shelter",
+      "distance_miles": 1.0,
+      "overall_score": 0.5075,
+      "status": "open"
+    },
+    {
+      "id": "hosp-002",
+      "name": "Newport Urgent Care Center",
+      "type": "hospital",
+      "distance_miles": 0.83,
+      "overall_score": 0.401,
+      "status": "open"
+    },
+    {
+      "id": "shelter-004",
+      "name": "Bayfront Temporary Shelter",
+      "type": "shelter",
+      "distance_miles": 0.57,
+      "overall_score": 0.304,
+      "status": "closed"
+    }
+  ],
+  "summary": "Synthesis agent failed; resources ranked by combined score estimate.",
+  "generated_at": "2026-05-03T01:40:17.863297+00:00"
+}
