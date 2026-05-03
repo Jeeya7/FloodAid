@@ -1,109 +1,32 @@
-import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
-import '../services/app_cache_service.dart';
 
-class ResourcesScreen extends StatefulWidget {
-  const ResourcesScreen({super.key});
+class ResourcesScreen extends StatelessWidget {
+  final Map<String, dynamic>? resourcesData;
+  final bool                  loading;
+  final String                error;
+  final Future<void> Function() onRefresh;
 
-  @override
-  State<ResourcesScreen> createState() => _ResourcesScreenState();
-}
+  const ResourcesScreen({
+    super.key,
+    this.resourcesData,
+    this.loading = true,
+    this.error   = '',
+    required this.onRefresh,
+  });
 
-class _ResourcesScreenState extends State<ResourcesScreen> {
-  Map<String, List<dynamic>> _recommended = {
-    'hospital': [],
-    'shelter': [],
-    'food': [],
-  };
-  List<dynamic> _ranked = [];
-  bool _loading = true;
-  bool _hasFetched = false;
-  String _error = '';
+  // ── Helpers ────────────────────────────────────────────────────────────────
 
-  @override
-  void initState() {
-    super.initState();
-    _fetchResources();
-  }
-
-  void _applyData(Map<String, dynamic> data) {
-    final rec = data['recommended_resources'] ?? {};
-    _recommended = {
+  Map<String, List<dynamic>> get _recommended {
+    final rec = resourcesData?['recommended_resources'] ?? {};
+    return {
       'hospital': List<dynamic>.from(rec['hospital'] ?? []),
       'shelter':  List<dynamic>.from(rec['shelter']  ?? []),
       'food':     List<dynamic>.from(rec['food']     ?? []),
     };
-    _ranked  = List<dynamic>.from(data['ranked_resources'] ?? []);
-    _loading = false;
   }
 
-  Future<void> _fetchResources({bool forceRefresh = false}) async {
-    if (_hasFetched && !forceRefresh) return;
-    _hasFetched = true;
-
-    setState(() {
-      _loading = true;
-      _error = '';
-    });
-
-    // Cache hit — no network call needed
-    if (!forceRefresh) {
-      final cached = await AppCacheService().loadResources();
-      if (cached != null) {
-        setState(() => _applyData(cached));
-        return;
-      }
-    }
-
-    try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      final response = await http.post(
-        Uri.parse('http://127.0.0.1:8000/api/resources'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'lat': position.latitude,
-          'lng': position.longitude,
-          'radius_miles': 25,
-        }),
-      ).timeout(const Duration(minutes: 3));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        await AppCacheService().saveResources(data);
-        setState(() => _applyData(data));
-      } else {
-        setState(() {
-          _error   = 'Failed to load resources (${response.statusCode})';
-          _loading = false;
-        });
-      }
-    } on TimeoutException {
-      setState(() {
-        _error      = 'Still analyzing resources — please try again in a moment.';
-        _loading    = false;
-        _hasFetched = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error      = 'Error: $e';
-        _loading    = false;
-        _hasFetched = false;
-      });
-    }
-  }
-
-  // ── Helpers ────────────────────────────────────────────────────────────────
+  List<dynamic> get _ranked =>
+      List<dynamic>.from(resourcesData?['ranked_resources'] ?? []);
 
   IconData _iconForType(String type) {
     switch (type) {
@@ -141,14 +64,14 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
 
   String _labelForType(String type) {
     switch (type) {
-      case 'hospital':    return 'Hospital';
-      case 'urgent_care': return 'Urgent Care';
-      case 'clinic':      return 'Clinic';
+      case 'hospital':           return 'Hospital';
+      case 'urgent_care':        return 'Urgent Care';
+      case 'clinic':             return 'Clinic';
       case 'food_bank':
-      case 'food':        return 'Food Bank';
+      case 'food':               return 'Food Bank';
       case 'shelter':
-      case 'evacuation_center': return 'Shelter';
-      default:            return 'Resource';
+      case 'evacuation_center':  return 'Shelter';
+      default:                   return 'Resource';
     }
   }
 
@@ -239,7 +162,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
         backgroundColor: const Color(0xFF0C3566),
         foregroundColor: Colors.white,
       ),
-      body: _loading
+      body: loading
           ? const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -253,15 +176,15 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
                 ],
               ),
             )
-          : _error.isNotEmpty
+          : error.isNotEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(_error, textAlign: TextAlign.center),
+                      Text(error, textAlign: TextAlign.center),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: () => _fetchResources(forceRefresh: true),
+                        onPressed: onRefresh,
                         child: const Text('Retry'),
                       ),
                     ],
@@ -270,7 +193,7 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
               : !hasAny
                   ? const Center(child: Text('No resources found nearby'))
                   : RefreshIndicator(
-                      onRefresh: () => _fetchResources(forceRefresh: true),
+                      onRefresh: onRefresh,
                       child: ListView(
                         padding: const EdgeInsets.all(12),
                         children: [

@@ -1,13 +1,20 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:http/http.dart' as http;
-import '../services/app_cache_service.dart';
 
 class MapScreen extends StatefulWidget {
-  const MapScreen({super.key});
+  final LatLng?               userLocation;
+  final Map<String, dynamic>? resourcesData;
+  final Map<String, dynamic>? riskData;
+  final bool                  loading;
+
+  const MapScreen({
+    super.key,
+    this.userLocation,
+    this.resourcesData,
+    this.riskData,
+    this.loading = true,
+  });
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -15,56 +22,46 @@ class MapScreen extends StatefulWidget {
 
 class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
-  LatLng? _userLocation;
-  bool _loading = true;
-  String _riskLevel = 'low';
-  List<Marker> _resourceMarkers = [];
+  bool _movedToUser = false;
 
   @override
-  void initState() {
-    super.initState();
-    _getLocation();
-  }
-
-  Future<void> _getLocation() async {
-    try {
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-
-      setState(() {
-        _userLocation = LatLng(position.latitude, position.longitude);
-        _loading = false;
+  void didUpdateWidget(MapScreen old) {
+    super.didUpdateWidget(old);
+    if (!_movedToUser && widget.userLocation != null) {
+      _movedToUser = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _mapController.move(widget.userLocation!, 12.0);
       });
-
-      _mapController.move(_userLocation!, 12.0);
-
-      await Future.wait([
-        _fetchRisk(position.latitude, position.longitude),
-        _fetchResources(position.latitude, position.longitude),
-      ]);
-
-    } catch (e) {
-      setState(() => _loading = false);
     }
   }
 
-  void _applyRiskScore(int score) {
-    if (score >= 70) {
-      _riskLevel = 'high';
-    } else if (score >= 40) {
-      _riskLevel = 'moderate';
-    } else {
-      _riskLevel = 'low';
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  String _riskLevel() {
+    final score = (widget.riskData?['risk_score'] as num?)?.toInt() ?? 0;
+    if (score >= 70) return 'high';
+    if (score >= 40) return 'moderate';
+    return 'low';
+  }
+
+  Color _riskColor() {
+    switch (_riskLevel()) {
+      case 'high':     return const Color(0xFFE05050);
+      case 'moderate': return const Color(0xFFE8A030);
+      default:         return const Color(0xFF4AAD6A);
     }
   }
 
-  List<Marker> _buildMarkers(List resources) {
+  String _riskLabel() {
+    switch (_riskLevel()) {
+      case 'high':     return 'HIGH FLOOD RISK';
+      case 'moderate': return 'MODERATE FLOOD RISK';
+      default:         return 'LOW FLOOD RISK — Area appears safe';
+    }
+  }
+
+  List<Marker> _buildResourceMarkers() {
+    final List resources = widget.resourcesData?['ranked_resources'] ?? [];
     return resources.map<Marker>((r) {
       final type = r['type'] ?? 'shelter';
       return Marker(
@@ -76,64 +73,10 @@ class _MapScreenState extends State<MapScreen> {
         height: 36,
         child: Tooltip(
           message: r['name'] ?? type,
-          child: Icon(
-            _iconForType(type),
-            color: _colorForType(type),
-            size: 30,
-          ),
+          child: Icon(_iconForType(type), color: _colorForType(type), size: 30),
         ),
       );
     }).toList();
-  }
-
-  Future<void> _fetchRisk(double lat, double lng) async {
-    // Cache hit
-    final cached = await AppCacheService().loadRisk();
-    if (cached != null) {
-      setState(() => _applyRiskScore((cached['risk_score'] as num?)?.toInt() ?? 0));
-      return;
-    }
-
-    try {
-      final response = await http.post(
-        Uri.parse('http://localhost:8000/api/risk-regions'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'lat': lat, 'lng': lng, 'radius_miles': 25}),
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        await AppCacheService().saveRisk(data);
-        setState(() => _applyRiskScore((data['risk_score'] as num?)?.toInt() ?? 0));
-      }
-    } catch (e) {
-      debugPrint('Risk API error: $e');
-    }
-  }
-
-  Future<void> _fetchResources(double lat, double lng) async {
-    // Cache hit — ranked_resources is the flat list used for map markers
-    final cached = await AppCacheService().loadResources();
-    if (cached != null) {
-      final List resources = cached['ranked_resources'] ?? [];
-      setState(() => _resourceMarkers = _buildMarkers(resources));
-      return;
-    }
-
-    try {
-      final response = await http.post(
-        Uri.parse('http://localhost:8000/api/resources'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'lat': lat, 'lng': lng, 'radius_miles': 25}),
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        await AppCacheService().saveResources(data);
-        final List resources = data['ranked_resources'] ?? [];
-        setState(() => _resourceMarkers = _buildMarkers(resources));
-      }
-    } catch (e) {
-      debugPrint('Resources API error: $e');
-    }
   }
 
   IconData _iconForType(String type) {
@@ -170,30 +113,10 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  Color _riskColor() {
-    switch (_riskLevel) {
-      case 'high':
-        return const Color(0xFFE05050);
-      case 'moderate':
-        return const Color(0xFFE8A030);
-      default:
-        return const Color(0xFF4AAD6A);
-    }
-  }
-
-  String _riskLabel() {
-    switch (_riskLevel) {
-      case 'high':
-        return 'HIGH FLOOD RISK';
-      case 'moderate':
-        return 'MODERATE FLOOD RISK';
-      default:
-        return 'LOW FLOOD RISK — Area appears safe';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final markers = _buildResourceMarkers();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('FloodAid'),
@@ -220,13 +143,13 @@ class _MapScreenState extends State<MapScreen> {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.floodaid.app',
               ),
-              if (_resourceMarkers.isNotEmpty)
-                MarkerLayer(markers: _resourceMarkers),
-              if (_userLocation != null)
+              if (markers.isNotEmpty)
+                MarkerLayer(markers: markers),
+              if (widget.userLocation != null)
                 MarkerLayer(
                   markers: [
                     Marker(
-                      point: _userLocation!,
+                      point: widget.userLocation!,
                       width: 40,
                       height: 40,
                       child: const Icon(
@@ -259,7 +182,7 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
 
-          if (_loading)
+          if (widget.loading)
             const Center(child: CircularProgressIndicator()),
 
           Positioned(
@@ -268,8 +191,8 @@ class _MapScreenState extends State<MapScreen> {
             child: FloatingActionButton(
               backgroundColor: const Color(0xFF1A5FA8),
               onPressed: () {
-                if (_userLocation != null) {
-                  _mapController.move(_userLocation!, 12.0);
+                if (widget.userLocation != null) {
+                  _mapController.move(widget.userLocation!, 12.0);
                 }
               },
               child: const Icon(Icons.my_location, color: Colors.white),
