@@ -8,54 +8,55 @@ FloodAid is a hackathon-built multi-agent flood prediction and response platform
 
 The system ingests live environmental signals from public government APIs and transforms them into actionable flood intelligence.
 
-FloodAid was built as part of the 2026 BeaverHacks hackathon.
 
 ## Why FloodAid?
 
-Flooding is one of the most common and costly natural disasters in the United States.
+Every year, floods kill hundreds of Americans and displace hundreds of thousands more. When a flood warning hits, residents face a terrifying combination of:
+* Information overload — too many alerts, maps, and news updates with no clear next step
+* Decision paralysis — not knowing whether to stay, evacuate, or call for help
+* Resource blindness — not knowing which shelters are open, which roads are safe, or where the nearest hospital is
+* Emotional distress — fear and panic that make rational decision-making harder
 
-Existing public data sources provide critical environmental information, but the data is fragmented across multiple systems and difficult to operationalize in real time.
-
-FloodAid bridges that gap by combining:
-
-* Real-time USGS stream gauge data
-* NOAA weather forecasts and alerts
-* Spatial gauge proximity analysis
-* Flood risk scoring
-* Emergency route intelligence
+Existing tools like weather apps and FEMA alerts tell residents that there is a flood. FloodAid tells them what to do about it, where to go, and how to get there safely — all while providing calm emotional support through our AI chatbot, Droppy.
 
 ## Features
 
 ### Real-Time Hydrology Monitoring
 
-Pulls live streamflow and water level data from USGS gauge stations nationwide.
+Pulls live streamflow and water level data from United States Geological Survey (USGS) gauge stations nationwide.
 
 ### Weather Intelligence
 
-Integrates NOAA weather forecasts and active weather alerts.
+Integrates National Oceanic and Atmospheric Administration (NOAA) weather forecasts and active weather alerts.
 
-### Flood Risk Prediction
+### Interactive Flood Risk Map
 
-Computes environmental risk states using:
+Map screen loads user's GPS location to center risk map.
 
-* Streamflow percentile ranking
+Flood risk is overlaid in color (green for safe, orange for moderate, red for high) over map.
+
+Flood risk is computed using public APIs:
 * Water level trend analysis
 * Rainfall forecast severity
 * Alert conditions
 
-### Spatial Gauge Network
+### Emergency Resource Finder
 
-Maps locations to nearest hydrological monitoring stations across the US.
+The resources tab calls backend in real time, passing user's GPS coordinates.
+  
+It returns a ranked list of hospitals, urgent care clinics, shelters, and food banks sorted by distance from user location. 
 
-### Emergency Decision Support
+Each card shows the facility name, type, address, and distance in miles.
 
-Provides:
+### Droppy — AI Support Chatbot
 
-* Safer evacuation route recommendations
-* Nearby emergency shelters/resources
-* Risk-aware route prioritization
+Droppy is a AI-powered support assistant.
 
-### Multi-Agent Architecture
+Droppy is powered by the NVIDIA Nemotron API and uses a custom system prompt that injects user's real-time flood context: risk zone, river stage, nearest shelter.
+
+Droppy provides calm and understanding guidance during stressful these stressful events.
+
+## Multi-Agent Architecture
 
 FloodAid is structured as cooperating agents for:
 
@@ -89,24 +90,22 @@ Emergency Routing + Resource Recommendation
 
 ## Tech Stack
 
-### Backend
-
-* Python
-* NVIDIA Nemotron for Chatbot
-
-
-### Frontend
-
-* Flutter
-
-### Data Sources
-
-* USGS Water Services API
-* NOAA weather.gov API
+| Layer | Technology |
+|----------|----------|
+| Mobile Frontend | Flutter (Dart) |
+| Map | flutter_map + OpenStreetMap |
+| GPS | geolocator package |
+| LLM | OpenRouter API (Nvidia Nemotron) |
 
 
+## Data Sources
+| API | Data | Description |
+|----------|----------|----------|
+| USGS Water Services API | Gauge stations and water levels | Gauge station locations for flood risk coverage network, water levels for risk analysis |
+| National Weather Service (NWS) API | National Weather Service Data | Rain information and weather alerts for risk analysis |
+| OpenStreetMap Overpass API | Hospital and other resources | For resources tab |
 
-### System Design
+## System Design
 
 * Multi-agent service orchestration
 
@@ -114,76 +113,90 @@ Emergency Routing + Resource Recommendation
 
 ## Project Structure
 
-TBD
 
 ```text
 FloodAid/
 ├── backend/
-│   └── services/
-│       ├── food_service.py
-│       ├── hospital_service.py
-│       ├── shelter_service.py
-│       ├── usgs_service.py
-│       └── weather_service.py
-│   └── agents/
+│   ├── services/
+│       ├── food_service.py     # Food bank finder
+│       ├── hospital_service.py  # Hospital finder via Overpass API
+│       ├── shelter_service.py   # Emergency shelter finder
+│       ├── usgs_service.py      # USGS gauge lookup by bounding box
+│       └── weather_service.py   # NWS alerts + hourly forecast
+│   ├── agents/
 │       ├── chat.py
-│       ├── emergency_resource_agent.py
-│       └── risk_region_agent.py
+│       ├── emergency_resource_agent.py  # Flood risk debate + scoring agents
+│       └── risk_region_agent.py     # Resource ranking + prioritization agent
+│   ├── tools/                  # LangChain @tool wrappers for agents
+│   └── agent_response/          # JSON outputs saved from agent runs
 │
 ├── frontend/
-│   └── floodaid/
-│   └── flutter/
-├── main.py
+│   ├── floodaid/
+│       ├── Lib/  
+│           ├── main.dart              # App entry, MaterialApp setup
+│           ├── map/
+│               └── map_screen.dart    # GPS, map, risk banner, resource markers
+│           ├── chat/
+│               └── chat_screen.dart   # Droppy chatbot UI + NVIDIA Nemotron API
+│           ├── resources/
+│               └── resources_screen.dart # Resource list from backend
+│           └── screens/
+│               └── main_shell.dart    # Bottom nav (Map / Chat / Resources)
+│       ├── assets/                    # Images, icons, Droppy mascot
+│       ├── pubspec.yaml               # Flutter dependencies
+│       └── android/ios/web/          # Platform-specific configs
+├── iOS/                               # iOS native placeholder
+├── start.sh                           # One-command startup for the whole app
 └── README.md
 ```
 
 ---
 
-## Getting Started
-
-### Clone
-
-```bash
+## Installation & Setup
+Prerequisites
+Python 3.11 or higher
+Flutter SDK (stable channel)
+Git
+1. Clone the repository
 git clone https://github.com/Jeeya7/FloodAid.git
 cd FloodAid
-```
 
-### Install dependencies
-
+2. Backend setup
+```bash
+cd backend
+# Install all dependencies
 ```bash
 pip install -r requirements.txt
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env and add your OPENROUTER_API_KEY
 ```
 
-### Install Flutter
+3. Frontend setup
+``` bash
+cd frontend/floodaid
 
-```bash
-# TODO
+# Install Flutter packages
+flutter pub get
 ```
+## Running the App
 
-### Run
-
-```bash
-# TODO
+From the root FloodAid/ directory:
+``` bash
+bash start.sh
 ```
+This starts both the backend server and the Flutter app simultaneously. Press Ctrl+C to stop both.
 
----
 
-## Example Output
+## Hackathon
 
-```json
-{
-  "rain_forecast_inches": 2.4,
-  "water_level_status": "high",
-  "streamflow_status": "above_normal",
-  "weather_alert": "flood_watch",
-  "water_level_trend": "rising"
-}
-```
+FloodAid was built in under 24 hours at BeaverHacks 2026 by a team of four students passionate about using AI for real-world impact. We chose floods because they are one of the most common and deadly natural disasters in the United States — and because existing flood apps tell you what is happening, but not what to do about it.
 
-<!-- ---
+FloodAid changes that. It does not just show you a flood map. It reasons about your specific situation, finds the resources closest to you that are actually safe to reach, and guides you there with calm, human-centered language — even if you are scared, even if you have never evacuated before.
 
-## Hackathon Vision
 
+### Vision
 FloodAid aims to make flood intelligence accessible, interpretable, and actionable for both emergency responders and local communities.
 
 Our long-term vision includes:
@@ -195,17 +208,14 @@ Our long-term vision includes:
 
 ---
 
-## Future Work
-
-* Watershed graph modeling
-* ML-based flood forecasting
-* Persistent geospatial indexing
-* Distributed event processing
-* Interactive emergency response dashboard
-
---- -->
-
 ## Team
+
+| Name | Role |
+|----------|----------|
+| Jiya Pradhan | Flutter (Dart) |
+| Jayasnehasree Sannidhi | flutter_map + OpenStreetMap |
+| Saranya Sounder Rajan | geolocator package |
+| Ngoc Le | OpenRouter API (Nvidia Nemotron) |
 
 
 ---
