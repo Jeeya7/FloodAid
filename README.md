@@ -161,13 +161,6 @@ cd frontend/floodaid
 # Install Flutter packages
 flutter pub get
 ```
-## Running the App
-
-From the root FloodAid/ directory:
-``` bash
-bash start.sh
-```
-This starts both the backend server and the Flutter app simultaneously. Press Ctrl+C to stop both.
 
 
 ## Hackathon
