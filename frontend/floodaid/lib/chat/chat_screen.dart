@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -15,6 +16,10 @@ class _ChatScreenState extends State<ChatScreen> {
   final ScrollController _scrollController = ScrollController();
 
   bool _isTyping = false;
+  String _alertText = 'Checking flood status...';
+  Color _alertColor = const Color(0xFFFEF3C7);
+  Color _alertTextColor = const Color(0xFF92400E);
+  Color _alertIconColor = const Color(0xFFD97706);
 
   final List<Map<String, String>> _messages = [
     {
@@ -35,6 +40,53 @@ class _ChatScreenState extends State<ChatScreen> {
 
   static const String _backendUrl = 'http://127.0.0.1:8000';
 
+  @override
+  void initState() {
+    super.initState();
+    _fetchAlert();
+  }
+
+  Future<void> _fetchAlert() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$_backendUrl/api/alert'))
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final riskLevel = data['risk_level'] ?? 'low';
+        final alertText = data['alert'] ?? 'No active flood alerts';
+        setState(() {
+          _alertText = alertText;
+          switch (riskLevel) {
+            case 'critical':
+              _alertColor = const Color(0xFFFFE4E4);
+              _alertTextColor = const Color(0xFF991B1B);
+              _alertIconColor = const Color(0xFFDC2626);
+              break;
+            case 'high':
+              _alertColor = const Color(0xFFFFEDD5);
+              _alertTextColor = const Color(0xFF9A3412);
+              _alertIconColor = const Color(0xFFEA580C);
+              break;
+            case 'moderate':
+              _alertColor = const Color(0xFFFEF3C7);
+              _alertTextColor = const Color(0xFF92400E);
+              _alertIconColor = const Color(0xFFD97706);
+              break;
+            default:
+              _alertColor = const Color(0xFFDCFCE7);
+              _alertTextColor = const Color(0xFF166534);
+              _alertIconColor = const Color(0xFF16A34A);
+          }
+        });
+      }
+    } catch (_) {
+      setState(() {
+        _alertText = 'Could not load flood status';
+      });
+    }
+  }
+
   Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
@@ -49,10 +101,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       final response = await http.post(
-        Uri.parse('$_backendUrl/chat'),
+        Uri.parse('$_backendUrl/api/chat'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'message': text, 'history': _history}),
-      );
+      ).timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -162,18 +214,18 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget _buildAlertBanner() {
     return Container(
       width: double.infinity,
-      color: const Color(0xFFFEF3C7),
+      color: _alertColor,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.warning_amber_rounded, color: Color(0xFFD97706), size: 18),
-          SizedBox(width: 8),
+          Icon(Icons.warning_amber_rounded, color: _alertIconColor, size: 18),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
-              'Flood warning active in Riverside area',
+              _alertText,
               style: TextStyle(
                 fontSize: 13,
-                color: Color(0xFF92400E),
+                color: _alertTextColor,
                 fontWeight: FontWeight.w500,
               ),
             ),

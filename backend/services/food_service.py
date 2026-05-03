@@ -1,6 +1,5 @@
 # food_service.py
 # Fetches food-assistance resources near a location using Google Places.
-# Falls back to labelled mock data if API fails or returns no usable results.
 
 import math
 import os
@@ -23,68 +22,6 @@ GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY")
 GOOGLE_PLACES_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
 
 _TIMEOUT = 10
-
-
-_MOCK_FOOD_RESOURCES = [
-    {
-        "id": "food-001",
-        "name": "Newport Community Food Pantry",
-        "type": "pantry",
-        "lat": 44.6368,
-        "lng": -124.0535,
-        "address": "432 NW Coast St, Newport, OR 97365",
-        "distance_miles": 0.4,
-        "status": "open",
-        "opening_hours": {"open_now": True},
-        "phone": "541-555-0101",
-        "notes": "Mock data. Open Mon–Fri 9am–5pm.",
-    },
-    {
-        "id": "food-002",
-        "name": "Lincoln County Meal Site",
-        "type": "meal_site",
-        "lat": 44.6412,
-        "lng": -124.0510,
-        "address": "118 SE Benton St, Newport, OR 97365",
-        "distance_miles": 0.7,
-        "status": "open",
-        "opening_hours": {"open_now": True},
-        "phone": "541-555-0202",
-        "notes": "Mock data. Hot meals served daily.",
-    },
-    {
-        "id": "food-003",
-        "name": "Oregon Coast Emergency Food Bank",
-        "type": "food_bank",
-        "lat": 44.6290,
-        "lng": -124.0600,
-        "address": "750 SW Coos Ave, Newport, OR 97365",
-        "distance_miles": 1.2,
-        "status": "open",
-        "opening_hours": {"open_now": True},
-        "phone": "541-555-0303",
-        "notes": "Mock data. Emergency food distribution site.",
-    },
-]
-
-
-def _distance_miles(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    """Calculate distance between two lat/lng points in miles."""
-    radius_earth_miles = 3958.8
-
-    dlat = math.radians(lat2 - lat1)
-    dlng = math.radians(lng2 - lng1)
-
-    a = (
-        math.sin(dlat / 2) ** 2
-        + math.cos(math.radians(lat1))
-        * math.cos(math.radians(lat2))
-        * math.sin(dlng / 2) ** 2
-    )
-
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-
-    return radius_earth_miles * c
 
 
 def _extract_status(place: dict[str, Any]) -> tuple[str, dict[str, Any]]:
@@ -126,46 +63,27 @@ def _infer_resource_type(name: str) -> str:
     return "unknown"
 
 
-def _is_food_assistance_place(place: dict[str, Any]) -> bool:
-    """
-    Keep real emergency food resources.
-    Remove grocery stores, gas stations, restaurants, and random food businesses.
-    """
+def _distance_miles(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """Calculate distance between two lat/lng points in miles."""
+    radius_earth_miles = 3958.8
 
-    name = place.get("name", "").lower()
-    types = place.get("types", [])
+    dlat = math.radians(lat2 - lat1)
+    dlng = math.radians(lng2 - lng1)
 
-    strong_keywords = [
-        "food bank",
-        "food pantry",
-        "food share",
-        "food distribution",
-        "meal site",
-        "basic needs",
-    ]
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(dlng / 2) ** 2
+    )
 
-    reject_types = {
-        "grocery_or_supermarket",
-        "convenience_store",
-        "gas_station",
-        "liquor_store",
-        "bakery",
-        "cafe",
-        "restaurant",
-    }
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-    if any(keyword in name for keyword in strong_keywords):
-        return True
-
-    if any(place_type in reject_types for place_type in types):
-        return False
-
-    return False
+    return radius_earth_miles * c
 
 
 def _normalize_google_place(
     place: dict[str, Any],
-    index: int,
     user_lat: float,
     user_lng: float,
 ) -> dict[str, Any]:
@@ -180,7 +98,7 @@ def _normalize_google_place(
     status, opening_hours = _extract_status(place)
 
     return {
-        "id": f"food-{index:03}",
+        "id": place.get("place_id", name),
         "place_id": place.get("place_id", ""),
         "name": name,
         "type": _infer_resource_type(name),
@@ -201,17 +119,6 @@ def _normalize_google_place(
     }
 
 
-def _mock_response(reason: str) -> dict[str, Any]:
-    """Return clearly labelled mock data."""
-
-    return {
-        "source": "mock_food_api",
-        "using_mock_data": True,
-        "resources": _MOCK_FOOD_RESOURCES,
-        "error": reason,
-    }
-
-
 def get_food_resources(
     lat: float,
     lng: float,
@@ -220,22 +127,25 @@ def get_food_resources(
     """
     Return nearby food-assistance resources.
 
-    Uses Google Places when usable results exist.
-    Falls back to mock data when:
-    - requests is unavailable
-    - GOOGLE_PLACES_API_KEY is missing
-    - Google API errors
-    - Google returns no valid food assistance resources
+    Uses Google Places only.
+    Returns an empty resource list when the API is unavailable or returns no matches.
     """
 
     if not _REQUESTS_AVAILABLE:
-        return _mock_response("requests library not installed")
+        print(f"[food_service] requests library not installed; returning empty result for lat={lat}, lng={lng}")
+        return {"source": "google_places", "using_mock_data": False, "resources": [], "error": "requests library not installed"}
 
     if not GOOGLE_PLACES_API_KEY:
-        return _mock_response("GOOGLE_PLACES_API_KEY missing from .env")
+        print(f"[food_service] GOOGLE_PLACES_API_KEY missing; returning empty result for lat={lat}, lng={lng}")
+        return {"source": "google_places", "using_mock_data": False, "resources": [], "error": "GOOGLE_PLACES_API_KEY missing from .env"}
 
     try:
         radius_meters = int(min(radius_miles, 25) * 1609.34)
+
+        print(
+            f"[food_service] Fetching food resources near lat={lat}, lng={lng}, radius={radius_miles}mi "
+            f"({radius_meters}m)"
+        )
 
         params = {
             "location": f"{lat},{lng}",
@@ -253,24 +163,43 @@ def get_food_resources(
 
         data = response.json()
 
+        print(f"[food_service] Google Places status={data.get('status')}")
+
         if data.get("status") not in {"OK", "ZERO_RESULTS"}:
-            return _mock_response(f"Google Places error: {data.get('status')}")
+            return {
+                "source": "google_places",
+                "using_mock_data": False,
+                "resources": [],
+                "error": f"Google Places error: {data.get('status')}",
+            }
 
         raw_places = data.get("results", [])
+        print(f"[food_service] Google Places returned {len(raw_places)} raw results")
 
-        filtered_places = [
-            place for place in raw_places if _is_food_assistance_place(place)
-        ]
+        if raw_places:
+            preview = [place.get("name", "") for place in raw_places[:5]]
+            print(f"[food_service] Raw place preview: {preview}")
+
+        filtered_places = raw_places
+        print(f"[food_service] Accepted {len(filtered_places)} of {len(raw_places)} raw results")
 
         if not filtered_places:
-            return _mock_response("Google Places returned no food assistance resources")
+            print("[food_service] No food-assistance results from Google Places")
+            return {
+                "source": "google_places",
+                "using_mock_data": False,
+                "resources": [],
+                "error": "Google Places returned no food assistance resources",
+            }
 
         resources = [
-            _normalize_google_place(place, index, lat, lng)
-            for index, place in enumerate(filtered_places, start=1)
+            _normalize_google_place(place, lat, lng)
+            for place in filtered_places
         ]
 
         resources.sort(key=lambda item: item["distance_miles"])
+
+        print(f"[food_service] Returning {len(resources)} food resources from Google Places")
 
         return {
             "source": "google_places",
@@ -280,4 +209,10 @@ def get_food_resources(
         }
 
     except Exception as exc:
-        return _mock_response(str(exc))
+        print(f"[food_service] Google Places fetch failed for lat={lat}, lng={lng}: {exc}")
+        return {
+            "source": "google_places",
+            "using_mock_data": False,
+            "resources": [],
+            "error": str(exc),
+        }

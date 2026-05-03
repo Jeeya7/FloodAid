@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 
 class ResourcesScreen extends StatelessWidget {
   final Map<String, dynamic>? resourcesData;
-  final bool                  loading;
-  final String                error;
+  final bool loading;
+  final String error;
   final Future<void> Function() onRefresh;
 
   const ResourcesScreen({
     super.key,
     this.resourcesData,
     this.loading = true,
-    this.error   = '',
+    this.error = '',
     required this.onRefresh,
   });
 
@@ -20,8 +20,8 @@ class ResourcesScreen extends StatelessWidget {
     final rec = resourcesData?['recommended_resources'] ?? {};
     return {
       'hospital': List<dynamic>.from(rec['hospital'] ?? []),
-      'shelter':  List<dynamic>.from(rec['shelter']  ?? []),
-      'food':     List<dynamic>.from(rec['food']     ?? []),
+      'shelter': List<dynamic>.from(rec['shelter'] ?? []),
+      'food': List<dynamic>.from(rec['food'] ?? []),
     };
   }
 
@@ -64,14 +64,20 @@ class ResourcesScreen extends StatelessWidget {
 
   String _labelForType(String type) {
     switch (type) {
-      case 'hospital':           return 'Hospital';
-      case 'urgent_care':        return 'Urgent Care';
-      case 'clinic':             return 'Clinic';
+      case 'hospital':
+        return 'Hospital';
+      case 'urgent_care':
+        return 'Urgent Care';
+      case 'clinic':
+        return 'Clinic';
       case 'food_bank':
-      case 'food':               return 'Food Bank';
+      case 'food':
+        return 'Food Bank';
       case 'shelter':
-      case 'evacuation_center':  return 'Shelter';
-      default:                   return 'Resource';
+      case 'evacuation_center':
+        return 'Shelter';
+      default:
+        return 'Resource';
     }
   }
 
@@ -104,7 +110,15 @@ class ResourcesScreen extends StatelessWidget {
               ),
             ),
             if (r['address'] != null && r['address'].toString().isNotEmpty)
-              Text(r['address'], style: const TextStyle(fontSize: 12)),
+              Text(
+                'Address: ${r['address']}',
+                style: const TextStyle(fontSize: 12),
+              ),
+            if (r['phone'] != null && r['phone'].toString().isNotEmpty)
+              Text(
+                'Phone: ${r['phone']}',
+                style: const TextStyle(fontSize: 12),
+              ),
             if (r['distance_miles'] != null)
               Text(
                 '${r['distance_miles']} miles away',
@@ -120,12 +134,6 @@ class ResourcesScreen extends StatelessWidget {
               ),
           ],
         ),
-        trailing: r['phone'] != null && r['phone'].toString().isNotEmpty
-            ? IconButton(
-                icon: const Icon(Icons.phone, color: Color(0xFF1A5FA8)),
-                onPressed: () {},
-              )
-            : null,
       ),
     );
   }
@@ -157,11 +165,6 @@ class ResourcesScreen extends StatelessWidget {
     final hasAny = _recommended.values.any((list) => list.isNotEmpty);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Emergency Resources'),
-        backgroundColor: const Color(0xFF0C3566),
-        foregroundColor: Colors.white,
-      ),
       body: loading
           ? const Center(
               child: Column(
@@ -177,48 +180,48 @@ class ResourcesScreen extends StatelessWidget {
               ),
             )
           : error.isNotEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(error, textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: onRefresh,
-                        child: const Text('Retry'),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(error, textAlign: TextAlign.center),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: onRefresh,
+                    child: const Text('Retry'),
                   ),
-                )
-              : !hasAny
-                  ? const Center(child: Text('No resources found nearby'))
-                  : RefreshIndicator(
-                      onRefresh: onRefresh,
-                      child: ListView(
-                        padding: const EdgeInsets.all(12),
-                        children: [
-                          _categorySection('Hospitals', 'hospital'),
-                          _categorySection('Shelters', 'shelter'),
-                          _categorySection('Food', 'food'),
-                          if (_ranked.isNotEmpty) ...[
-                            const Padding(
-                              padding: EdgeInsets.fromLTRB(4, 24, 4, 6),
-                              child: Text(
-                                'All Resources',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF0C3566),
-                                ),
-                              ),
-                            ),
-                            ..._ranked.map(
-                              (r) => _resourceCard(Map<String, dynamic>.from(r)),
-                            ),
-                          ],
-                        ],
+                ],
+              ),
+            )
+          : !hasAny
+          ? const Center(child: Text('No resources found nearby'))
+          : RefreshIndicator(
+              onRefresh: onRefresh,
+              child: ListView(
+                padding: const EdgeInsets.all(12),
+                children: [
+                  _categorySection('Hospitals', 'hospital'),
+                  _categorySection('Shelters', 'shelter'),
+                  _categorySection('Food', 'food'),
+                  if (_ranked.isNotEmpty) ...[
+                    const Padding(
+                      padding: EdgeInsets.fromLTRB(4, 24, 4, 6),
+                      child: Text(
+                        'All Resources',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF0C3566),
+                        ),
                       ),
                     ),
+                    ..._ranked.map(
+                      (r) => _resourceCard(Map<String, dynamic>.from(r)),
+                    ),
+                  ],
+                ],
+              ),
+            ),
     );
   }
 }
