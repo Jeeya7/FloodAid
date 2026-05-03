@@ -136,3 +136,32 @@ def get_all_resources_tool(lat: float, lng: float, radius_miles: float = 10) -> 
         "hospitals": hospital_result,
         "shelters":  shelter_result,
     }
+
+@tool
+def create_bounds_tool(lat: float, lng: float, radius_miles: float = 25) -> dict:
+    """
+    Convert a center point (lat, lng) and radius (in miles) into a bounding box.
+
+    Returns a dict with:
+    north, south, east, west
+
+    Notes:
+    - Uses simple geographic approximation (1 degree ≈ 69 miles)
+    - Good enough for regional flood analysis
+    """
+
+    # Convert miles → degrees latitude
+    lat_delta = radius_miles / 69.0
+
+    # Convert miles → degrees longitude (adjust for latitude)
+    import math
+    lng_delta = radius_miles / (69.0 * math.cos(math.radians(lat)))
+
+    bounds = {
+        "north": lat + lat_delta,
+        "south": lat - lat_delta,
+        "east": lng + lng_delta,
+        "west": lng - lng_delta,
+    }
+
+    return bounds

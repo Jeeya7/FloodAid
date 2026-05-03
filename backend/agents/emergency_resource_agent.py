@@ -23,6 +23,7 @@ from tools.resource_tools import (
     get_food_resources_tool,
     get_hospitals_tool,
     get_shelters_tool,
+    create_bounds_tool
 )
 
 # Cap resources sent to the LLM to keep prompts small and stay inside quota
@@ -90,6 +91,9 @@ def resource_collection_step(
     Each resource gets a 'category' field ('food', 'hospital', or 'shelter')
     so downstream steps can see what kind of resource it is.
     """
+    bounds = create_bounds_tool.invoke(lat, lng)
+    
+    # TODO: Change this
     food_result     = get_food_resources_tool.invoke({"lat": lat, "lng": lng, "radius_miles": radius_miles})
     hospital_result = get_hospitals_tool.invoke({"lat": lat, "lng": lng, "radius_miles": radius_miles})
     shelter_result  = get_shelters_tool.invoke({"lat": lat, "lng": lng, "radius_miles": radius_miles})
@@ -319,7 +323,7 @@ def response_formatter_step(
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 
-def emergency_resource_agent(state: dict[str, Any]) -> dict[str, Any]:
+def emergency_resource_agent(lat, lng) -> dict[str, Any]:
     """
     Full multi-step emergency resource pipeline.
 
@@ -333,27 +337,16 @@ def emergency_resource_agent(state: dict[str, Any]) -> dict[str, Any]:
       recommended_resource, ranked_resources, summary,
       generated_at, debug_steps
     """
-    lat          = state.get("lat", 44.6367)
-    lng          = state.get("lng", -124.0535)
-    radius_miles = state.get("radius_miles", 10)
-    debug_steps: list[str] = list(state.get("debug_steps", []))
 
     # ── Step 1: collect raw data (Python, no LLM) ────────────────────────────
-    resources = resource_collection_step(lat, lng, radius_miles)
-    debug_steps.append(
-        f"resource_collection_step: fetched {len(resources)} resources "
-        f"(food + hospitals + shelters) within {radius_miles} miles."
-    )
+    resources = resource_collection_step(lat, lng)
 
     if not resources:
-        debug_steps.append("No resources found — returning empty result.")
         return {
-            **state,
             "recommended_resource": None,
             "ranked_resources": [],
             "summary": "No emergency resources found near this location.",
             "generated_at": datetime.now(timezone.utc).isoformat(),
-            "debug_steps": debug_steps,
         }
 
     # ── Step 2: safety scoring (LLM) ────────────────────────────────────────
@@ -361,43 +354,22 @@ def emergency_resource_agent(state: dict[str, Any]) -> dict[str, Any]:
     safety_map: dict[str, dict] = {
         r["id"]: r for r in safety_result.get("resources", [])
     }
-    debug_steps.append(
-        f"resource_safety_agent: scored {len(safety_map)} resources. "
-        f"Error: {safety_result.get('error', 'none')}"
-    )
 
     # ── Step 3: availability scoring (LLM) ───────────────────────────────────
     availability_result = availability_agent(resources)
     availability_map: dict[str, dict] = {
         r["id"]: r for r in availability_result.get("resources", [])
     }
-    debug_steps.append(
-        f"availability_agent: evaluated {len(availability_map)} resources. "
-        f"Error: {availability_result.get('error', 'none')}"
-    )
 
     # ── Step 4: distance ranking (Python) ────────────────────────────────────
     resources = distance_ranking_step(resources, lat, lng)
-    debug_steps.append(
-        "distance_ranking_step: computed haversine distances and normalised scores."
-    )
-
+    
     # ── Step 5: synthesis (LLM) ──────────────────────────────────────────────
     synthesis = resource_synthesis_agent(resources, safety_map, availability_map)
-    debug_steps.append(
-        f"resource_synthesis_agent: best_option_id={synthesis.get('best_option_id', 'none')}. "
-        f"Error: {synthesis.get('error', 'none')}"
-    )
 
     # ── Step 6: format final output (Python) ─────────────────────────────────
     final = response_formatter_step(resources, safety_map, availability_map, synthesis)
-    debug_steps.append(
-        f"response_formatter_step: built final JSON with "
-        f"{len(final['ranked_resources'])} ranked resources."
-    )
 
     return {
-        **state,
-        **final,
-        "debug_steps": debug_steps,
+        **final
     }
