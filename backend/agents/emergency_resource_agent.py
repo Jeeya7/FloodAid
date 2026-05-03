@@ -32,6 +32,9 @@ from tools.resource_tools import (
 # Cap resources sent to the LLM to keep prompts small and stay inside quota
 MAX_RESOURCES = 10
 
+BASE_DIR = Path(__file__).resolve().parent
+AGENT_RESPONSE_PATH = BASE_DIR.parent / "agent_response" / "emergency_resource_agent.json"
+
 
 # How many top resources to return per category
 TOP_N = 3
@@ -432,13 +435,11 @@ def emergency_resource_agent(lat, lng) -> dict[str, Any]:
     resources = resource_collection_step(lat, lng)
 
     if not resources:
-
-        return {
+        result = {
             "recommended_resources": {"hospital": [], "shelter": [], "food": []},
             "ranked_resources":      [],
             "summary":               "No emergency resources found near this location.",
             "generated_at":          datetime.now(timezone.utc).isoformat(),
-
         }
         _save_agent_response(result)
         return result
@@ -466,6 +467,6 @@ def emergency_resource_agent(lat, lng) -> dict[str, Any]:
 
     # ── Step 6: format final output (Python) ─────────────────────────────────
     final = response_formatter_step(resources, safety_map, availability_map, synthesis)
-
-    return {**final}
+    _save_agent_response(final)
+    return final
 

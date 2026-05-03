@@ -14,7 +14,6 @@ from langchain_core.tools import tool
 from services.usgs_service import DEFAULT_BOUNDS  # re-exported so agent never imports services
 from services.usgs_service import get_gauges_by_bounds as _get_gauges_by_bounds
 from services.usgs_service import get_usgs_water_data as _get_usgs_water_data
-from services.water_services_service import get_streamflow_context as _get_streamflow_context
 from services.weather_service import get_weather_context as _get_weather_context
 
 
@@ -40,18 +39,6 @@ def get_usgs_water_data_tool(station_id: str) -> dict:
              streamflow_cfs, percentile_rank, water_level_trend.
     """
     return _get_usgs_water_data(station_id)
-
-
-@tool
-def get_streamflow_context_tool(station_id: str) -> dict:
-    """
-    Return streamflow anomaly context for a given station.
-
-    Returns: station_id, streamflow_status, percent_difference,
-             anomaly_level, notes.
-    """
-    return _get_streamflow_context(station_id)
-
 
 @tool
 def get_weather_context_tool(lat: float, lng: float) -> dict:

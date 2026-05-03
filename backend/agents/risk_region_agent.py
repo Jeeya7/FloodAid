@@ -23,7 +23,6 @@ from openrouter_client import chat, parse_json_response
 from tools.risk_region_tools import (
     DEFAULT_BOUNDS,
     get_gauges_by_bounds_tool,
-    get_streamflow_context_tool,
     get_usgs_water_data_tool,
     get_weather_context_tool,
     create_bounds_tool
@@ -228,6 +227,15 @@ def response_formatter_agent(
     }
 
 
+def _save_agent_response(payload: dict[str, Any]) -> None:
+    try:
+        AGENT_RESPONSE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with AGENT_RESPONSE_PATH.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+    except OSError:
+        pass
+
+
 
 # ── Per-gauge pipeline ────────────────────────────────────────────────────────
 
@@ -238,12 +246,10 @@ def _process_gauge(gauge: dict[str, Any]) -> tuple[dict, dict]:
     # Fetch all three data sources concurrently (unchanged from original)
     with ThreadPoolExecutor(max_workers=3) as executor:
         usgs_future          = executor.submit(get_usgs_water_data_tool.invoke,    {"station_id": sid})
-        water_services_future = executor.submit(get_streamflow_context_tool.invoke, {"station_id": sid})
         weather_future        = executor.submit(get_weather_context_tool.invoke,    {"lat": gauge["lat"], "lng": gauge["lng"]})
 
         raw_packet = {
             "usgs":           usgs_future.result(),
-            "water_services": water_services_future.result(),
             "weather":        weather_future.result(),
         }
 

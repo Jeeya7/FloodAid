@@ -1,28 +1,76 @@
 {
   "recommended_resources": {
-    "hospital": {
-      "id": "463367491",
-      "name": "Samaritan Pacific Communities Hospital",
-      "type": "hospital",
-      "lat": 44.6287918,
-      "lng": -124.0594538,
-      "distance_miles": 0.47,
-      "overall_score": 0.5,
-      "status": "open",
-      "reasoning": "Synthesis unavailable; ranked by fallback score."
-    },
-    "shelter": null,
-    "food": {
-      "id": "food-002",
-      "name": "Toledo Food Pantry - Food Distribution Center",
-      "type": "food",
-      "lat": 44.6224694,
-      "lng": -123.934616,
-      "distance_miles": 5.7,
-      "overall_score": 0.5,
-      "status": "unknown",
-      "reasoning": "Synthesis unavailable; ranked by fallback score."
-    }
+    "hospital": [
+      {
+        "id": "463367491",
+        "name": "Samaritan Pacific Communities Hospital",
+        "type": "hospital",
+        "lat": 44.6287918,
+        "lng": -124.0594538,
+        "distance_miles": 0.47,
+        "overall_score": 1.0,
+        "status": "open",
+        "reasoning": "It scored 1.0 as an open hospital located just 0.47 miles away, ensuring immediate medical care."
+      },
+      {
+        "id": "1080968252",
+        "name": "Willamette Valley Cancer Institute and Research Center",
+        "type": "hospital",
+        "lat": 44.6521253,
+        "lng": -124.0537676,
+        "distance_miles": 1.54,
+        "overall_score": 1.0,
+        "status": "open",
+        "reasoning": "It scored 1.0 due to being an open hospital within a short distance of 1.54 miles, providing reliable health services."
+      },
+      {
+        "id": "549829765",
+        "name": "Siletz Community Health Clinic",
+        "type": "hospital",
+        "lat": 44.7212341,
+        "lng": -123.9044247,
+        "distance_miles": 9.53,
+        "overall_score": 1.0,
+        "status": "open",
+        "reasoning": "It scored 1.0 as an open hospital, even though it is 9.53 miles distant, its operational status guarantees dependable care."
+      }
+    ],
+    "shelter": [],
+    "food": [
+      {
+        "id": "food-002",
+        "name": "Toledo Food Pantry - Food Distribution Center",
+        "type": "food",
+        "lat": 44.6224694,
+        "lng": -123.934616,
+        "distance_miles": 5.7,
+        "overall_score": 1.0,
+        "status": "unknown",
+        "reasoning": "It scored 1.0 as a food pantry with unknown status but a relatively close distance of 5.7 miles, indicating high accessibility."
+      },
+      {
+        "id": "food-001",
+        "name": "USDA Food Distribution Center",
+        "type": "food",
+        "lat": 44.7187348,
+        "lng": -123.9032574,
+        "distance_miles": 9.46,
+        "overall_score": 1.0,
+        "status": "unknown",
+        "reasoning": "It scored 1.0 because it is a USDA food distribution center with unknown status and a moderate distance of 9.46 miles, still reflecting strong availability."
+      },
+      {
+        "id": "food-004",
+        "name": "Toledo Food Share Pantry",
+        "type": "food",
+        "lat": 44.6209885,
+        "lng": -123.9370472,
+        "distance_miles": 5.59,
+        "overall_score": 0.2553,
+        "status": "closed",
+        "reasoning": "It scored 0.2553 due to being closed and relatively close at 5.59 miles, limiting its usefulness."
+      }
+    ]
   },
   "ranked_resources": [
     {
@@ -32,9 +80,9 @@
       "lat": 44.6224694,
       "lng": -123.934616,
       "distance_miles": 5.7,
-      "overall_score": 0.5,
+      "overall_score": 1.0,
       "status": "unknown",
-      "reasoning": "Synthesis unavailable; ranked by fallback score."
+      "reasoning": "It scored 1.0 as a food pantry with unknown status but a relatively close distance of 5.7 miles, indicating high accessibility."
     },
     {
       "id": "food-001",
@@ -43,9 +91,9 @@
       "lat": 44.7187348,
       "lng": -123.9032574,
       "distance_miles": 9.46,
-      "overall_score": 0.5,
+      "overall_score": 1.0,
       "status": "unknown",
-      "reasoning": "Synthesis unavailable; ranked by fallback score."
+      "reasoning": "It scored 1.0 because it is a USDA food distribution center with unknown status and a moderate distance of 9.46 miles, still reflecting strong availability."
     },
     {
       "id": "463367491",
@@ -54,9 +102,9 @@
       "lat": 44.6287918,
       "lng": -124.0594538,
       "distance_miles": 0.47,
-      "overall_score": 0.5,
+      "overall_score": 1.0,
       "status": "open",
-      "reasoning": "Synthesis unavailable; ranked by fallback score."
+      "reasoning": "It scored 1.0 as an open hospital located just 0.47 miles away, ensuring immediate medical care."
     },
     {
       "id": "1080968252",
@@ -65,9 +113,9 @@
       "lat": 44.6521253,
       "lng": -124.0537676,
       "distance_miles": 1.54,
-      "overall_score": 0.5,
+      "overall_score": 1.0,
       "status": "open",
-      "reasoning": "Synthesis unavailable; ranked by fallback score."
+      "reasoning": "It scored 1.0 due to being an open hospital within a short distance of 1.54 miles, providing reliable health services."
     },
     {
       "id": "549829765",
@@ -76,9 +124,9 @@
       "lat": 44.7212341,
       "lng": -123.9044247,
       "distance_miles": 9.53,
-      "overall_score": 0.5,
+      "overall_score": 1.0,
       "status": "open",
-      "reasoning": "Synthesis unavailable; ranked by fallback score."
+      "reasoning": "It scored 1.0 as an open hospital, even though it is 9.53 miles distant, its operational status guarantees dependable care."
     },
     {
       "id": "6068831201",
@@ -87,9 +135,9 @@
       "lat": 44.8178984,
       "lng": -124.0633858,
       "distance_miles": 13.0,
-      "overall_score": 0.5,
+      "overall_score": 1.0,
       "status": "open",
-      "reasoning": "Synthesis unavailable; ranked by fallback score."
+      "reasoning": "It scored 1.0 for being an open clinic at 13.0 miles, maintaining availability for emergency needs."
     },
     {
       "id": "1153934493",
@@ -98,9 +146,9 @@
       "lat": 44.4164347,
       "lng": -124.0760962,
       "distance_miles": 14.81,
-      "overall_score": 0.5,
+      "overall_score": 1.0,
       "status": "open",
-      "reasoning": "Synthesis unavailable; ranked by fallback score."
+      "reasoning": "It scored 1.0 as an open clinic 14.81 miles away, preserving readiness to assist."
     },
     {
       "id": "9191852835",
@@ -109,20 +157,20 @@
       "lat": 44.9592723,
       "lng": -124.013516,
       "distance_miles": 22.82,
-      "overall_score": 0.5,
+      "overall_score": 1.0,
       "status": "open",
-      "reasoning": "Synthesis unavailable; ranked by fallback score."
+      "reasoning": "It scored 1.0 because it is an open urgent care facility, despite being 22.82 miles distant, its status ensures access."
     },
     {
-      "id": "389090581",
-      "name": "Samaritan Coastal Clinic",
-      "type": "hospital",
-      "lat": 44.9718029,
-      "lng": -124.014639,
-      "distance_miles": 23.68,
-      "overall_score": 0.5,
-      "status": "open",
-      "reasoning": "Synthesis unavailable; ranked by fallback score."
+      "id": "food-004",
+      "name": "Toledo Food Share Pantry",
+      "type": "food",
+      "lat": 44.6209885,
+      "lng": -123.9370472,
+      "distance_miles": 5.59,
+      "overall_score": 0.2553,
+      "status": "closed",
+      "reasoning": "It scored 0.2553 due to being closed and relatively close at 5.59 miles, limiting its usefulness."
     },
     {
       "id": "food-003",
@@ -131,11 +179,11 @@
       "lat": 44.9717254,
       "lng": -124.011925,
       "distance_miles": 23.68,
-      "overall_score": 0.0,
+      "overall_score": 0.08,
       "status": "closed",
-      "reasoning": "Synthesis unavailable; ranked by fallback score."
+      "reasoning": "It scored 0.08 because it is closed and far away at 23.68 miles, severely reducing its availability."
     }
   ],
-  "summary": "Synthesis agent failed; resources ranked by fallback estimate.",
-  "generated_at": "2026-05-03T06:25:21.726163+00:00"
+  "summary": "Open and nearby resources received perfect scores, while closed or distant facilities scored lower.",
+  "generated_at": "2026-05-03T07:03:31.265762+00:00"
 }
