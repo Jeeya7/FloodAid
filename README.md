@@ -57,7 +57,7 @@ Droppy provides calm and understanding guidance during stressful these stressful
 ### System architecture
 ![](frontend/floodaid/assets/system_architecture.png)
 
-### Agent pipeline
+### Agent process (per-call)
 ![](frontend/floodaid/assets/agent_flow.png)
 
 
@@ -78,9 +78,6 @@ Droppy provides calm and understanding guidance during stressful these stressful
 | National Weather Service (NWS) API | National Weather Service Data | Rain information and weather alerts for risk analysis |
 | OpenStreetMap Overpass API | Hospital and other resources | For resources tab |
 
-## System Design
-
-* Multi-agent service orchestration
 
 ---
 
