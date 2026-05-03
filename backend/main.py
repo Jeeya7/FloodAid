@@ -11,10 +11,10 @@ LAT = 44.63
 LNG = -124.05
 
 if __name__ == "__main__":
-    # print("\n=== Flood Risk Analysis ===")
+    print("\n=== Flood Risk Analysis ===")
     
-    # risk_result = risk_region_agent(LAT, LNG)
-    # print(json.dumps(risk_result, indent=2))
+    risk_result = risk_region_agent(LAT, LNG)
+    print(json.dumps(risk_result, indent=2))
 
     print("\n=== Emergency Resources ===")
     

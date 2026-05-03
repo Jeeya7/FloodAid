@@ -15,6 +15,7 @@
 
 import json
 import math
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any
 from concurrent.futures import ThreadPoolExecutor
@@ -30,6 +31,9 @@ from tools.resource_tools import (
 
 # Cap resources sent to the LLM to keep prompts small and stay inside quota
 MAX_RESOURCES = 10
+
+BASE_DIR = Path(__file__).resolve().parent
+AGENT_RESPONSE_PATH = BASE_DIR.parent / "agent_response" / "emergency_resource_agent.json"
 
 
 # ── Fallback templates ────────────────────────────────────────────────────────
@@ -384,6 +388,15 @@ def response_formatter_step(
     }
 
 
+def _save_agent_response(payload: dict[str, Any]) -> None:
+    try:
+        AGENT_RESPONSE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with AGENT_RESPONSE_PATH.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+    except OSError:
+        pass
+
+
 # ── Main entry point ──────────────────────────────────────────────────────────
 
 def emergency_resource_agent(lat, lng) -> dict[str, Any]:
@@ -405,12 +418,14 @@ def emergency_resource_agent(lat, lng) -> dict[str, Any]:
     resources = resource_collection_step(lat, lng)
 
     if not resources:
-        return {
+        result = {
             "recommended_resource": None,
             "ranked_resources": [],
             "summary": "No emergency resources found near this location.",
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
+        _save_agent_response(result)
+        return result
 
     # ── Step 2: safety scoring (LLM) ────────────────────────────────────────
     safety_result = resource_safety_agent(resources)
@@ -433,6 +448,5 @@ def emergency_resource_agent(lat, lng) -> dict[str, Any]:
     # ── Step 6: format final output (Python) ─────────────────────────────────
     final = response_formatter_step(resources, safety_map, availability_map, synthesis)
 
-    return {
-        **final
-    }
+    _save_agent_response(final)
+    return final

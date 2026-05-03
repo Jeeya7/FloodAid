@@ -14,6 +14,7 @@
 # The LLM never calls external APIs — it only reasons over data Python fetched.
 
 import json
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any
 from concurrent.futures import ThreadPoolExecutor
@@ -29,6 +30,9 @@ from tools.risk_region_tools import (
 )
 
 MAX_GAUGES = 3
+
+BASE_DIR = Path(__file__).resolve().parent
+AGENT_RESPONSE_PATH = BASE_DIR.parent / "agent_response" / "risk_region_agent.json"
 
 NEWPORT_BOUNDS = {
     "south": 44.55,
@@ -224,6 +228,15 @@ def response_formatter_agent(
     }
 
 
+def _save_agent_response(payload: dict[str, Any]) -> None:
+    try:
+        AGENT_RESPONSE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with AGENT_RESPONSE_PATH.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+    except OSError:
+        pass
+
+
 # ── Main entry point ──────────────────────────────────────────────────────────
 
 def risk_region_agent(lat: float, lng: float, radius_miles: float = 25) -> dict[str, Any]:
@@ -299,7 +312,7 @@ def risk_region_agent(lat: float, lng: float, radius_miles: float = 25) -> dict[
     # ── Build overall summary (single extra LLM call) ────────────────────────
     summary = _build_summary(regions)
 
-    return {
+    result = {
         "lat": lat,
         "lang": lng,
         "raidus": radius_miles,
@@ -308,6 +321,9 @@ def risk_region_agent(lat: float, lng: float, radius_miles: float = 25) -> dict[
         "summary": summary,
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
+
+    _save_agent_response(result)
+    return result
 
 
 def _build_summary(regions: list[dict]) -> str:
