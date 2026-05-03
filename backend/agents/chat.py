@@ -49,31 +49,49 @@ def _load_resource_data() -> dict[str, Any]:
 def _build_system_prompt() -> str:
     flood_data = _load_flood_data()
     resource_data = _load_resource_data()
+
+    # Only send what Droppy actually needs — not the full raw packets
+    regions_slim = [
+        {
+            "name": r.get("name"),
+            "risk_level": r.get("risk_level"),
+            "confidence": r.get("confidence"),
+            "recommended_action": r.get("recommended_action"),
+            "reasoning_summary": r.get("reasoning_summary"),
+        }
+        for r in flood_data.get("regions", [])
+    ]
+
+    resources_slim = {
+        "hospital": [
+            {"name": r.get("name"), "distance_miles": r.get("distance_miles"), "status": r.get("status")}
+            for r in resource_data.get("recommended_resources", {}).get("hospital", [])
+        ],
+        "shelter": [
+            {"name": r.get("name"), "distance_miles": r.get("distance_miles"), "status": r.get("status")}
+            for r in resource_data.get("recommended_resources", {}).get("shelter", [])
+        ],
+        "food": [
+            {"name": r.get("name"), "distance_miles": r.get("distance_miles"), "status": r.get("status")}
+            for r in resource_data.get("recommended_resources", {}).get("food", [])
+        ],
+    }
+
     return f"""You are Droppy, the FloodAid emergency assistant — calm, warm, and supportive.
 You help people stay safe during flood emergencies near Newport, OR and the Yaquina River area.
 
-IMPORTANT: Reply directly and concisely. Never show your thinking or reasoning process.
-Never start with "Okay," or "Let me check" or explain what you are doing.
-Just give the answer directly as if talking to someone in an emergency.
-
 RULES:
-- Only use the real-time flood data provided below. Never invent locations, distances, or risk levels.
-- Always mention active flood alerts when relevant.
-- Keep responses under 60 words. Be brief and direct.
-- Speak plainly — the user may be scared. Be reassuring but honest.
-- For danger questions: use risk_level and confidence from regions[].
-- For weather questions: use the weather evidence and alert_level.
-- For river questions: use hydrology evidence and trend.
-- For action questions: use recommended_action from the region.
-- For food/shelter questions: say you don't have that data and direct them to call 211 for local resources.
-- For medical emergencies: always say call 911 first.
-- Never explain your reasoning. Just answer.
+- Reply directly in under 60 words. Never explain your reasoning.
+- Only use the data below. Never invent locations or risk levels.
+- For medical emergencies: say call 911 first.
+- For danger: use risk_level and recommended_action.
+- For food/shelter/hospital: use the resource data below.
 
-CURRENT REAL-TIME FLOOD DATA:
-{json.dumps(flood_data, indent=2)}
+FLOOD DATA:
+{json.dumps(regions_slim, indent=2)}
 
-CURRENT EMERGENCY RESOURCE DATA:
-{json.dumps(resource_data, indent=2)}
+RESOURCES:
+{json.dumps(resources_slim, indent=2)}
 """
 
 
