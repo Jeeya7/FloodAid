@@ -1,19 +1,21 @@
 # emergency_resource_agent.py
 #
-# Fast two-phase pipeline:
-#   Phase 1 — resource_collection_step  (Python, parallel HTTP)
-#   Phase 2 — resource_analyst_agent    (single LLM call)
-#            + distance_ranking_step    (Python, runs in parallel with LLM)
-#   Phase 3 — python_scoring_step       (Python, no LLM)
-#   Phase 4 — response_formatter_step   (Python, no LLM)
+# Multi-step pipeline that finds, evaluates, and ranks emergency resources
+# (shelters, hospitals, food) near a given location.
 #
-# Previously: 3 LLM calls in 2 sequential rounds.
-# Now:        1 LLM call, overlapped with distance math.
+# Flow:
+#   1. resource_collection_step  — Python calls tools; no LLM
+#   2. resource_safety_agent     — LLM scores how safe each resource is
+#   3. availability_agent        — LLM scores whether each resource is usable
+#   4. distance_ranking_step     — Python computes and normalises distance scores
+#   5. resource_synthesis_agent  — Python scores + LLM adds reasoning/summary
+#   6. response_formatter_step   — Python merges everything into frontend-ready JSON
+#
+# The LLM never calls external APIs — it only reasons over data Python fetched.
 
 import json
 import math
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 from concurrent.futures import ThreadPoolExecutor
 
@@ -22,133 +24,200 @@ from tools.resource_tools import (
     get_food_resources_tool,
     get_hospitals_tool,
     get_shelters_tool,
-    create_bounds_tool,
+    create_bounds_tool
 )
 
-MAX_RESOURCES = 10
-TOP_N         = 3
+# How many top resources to return per category
+TOP_N = 3
 
-_WEIGHTS              = {"safety": 0.4, "availability": 0.4, "distance": 0.2}
-_CATEGORY_MULTIPLIER  = {"hospital": 1.2, "shelter": 1.1, "food": 1.0}
+# Weights used by Python scoring in resource_synthesis_agent
+_WEIGHTS = {"safety": 0.4, "availability": 0.4, "distance": 0.2}
+_CATEGORY_MULTIPLIER = {"hospital": 1.2, "shelter": 1.1, "food": 1.0}
 
-BASE_DIR = Path(__file__).resolve().parent
-AGENT_RESPONSE_PATH = BASE_DIR.parent / "agent_response" / "emergency_resource_agent.json"
-
+# In-memory cache keyed by rounded lat/lng
 _cache: dict[str, Any] = {}
 
 
-# ── Fallback ──────────────────────────────────────────────────────────────────
+# ── Fallback templates ────────────────────────────────────────────────────────
 
-def _fallback_analysis(resources: list[dict]) -> dict[str, Any]:
+def _fallback_safety(resources: list[dict]) -> dict[str, Any]:
     return {
         "resources": [
             {
-                "id":                 r["id"],
-                "safety_score":       0.5,
-                "safety_level":       "moderate",
-                "availability_score": 0.5 if r.get("status") != "closed" else 0.0,
-                "status":             r.get("status", "unknown"),
-                "reasoning":          "Analysis unavailable; using default scores.",
+                "id": r["id"],
+                "safety_score": 0.5,
+                "safety_level": "moderate",
+                "reasoning": "Safety check unavailable; defaulting to moderate.",
             }
             for r in resources
-        ],
-        "summary": "Resources ranked by estimated suitability.",
+        ]
     }
 
 
-def _load_cached_response(cache_key: str) -> dict[str, Any] | None:
-    cached = _cache.get(cache_key)
-    if cached is not None:
-        return cached
-
-    try:
-        if not AGENT_RESPONSE_PATH.exists():
-            return None
-
-        with AGENT_RESPONSE_PATH.open("r", encoding="utf-8") as f:
-            payload = json.load(f)
-
-        if isinstance(payload, dict) and payload.get("cache_key") == cache_key:
-            _cache[cache_key] = payload
-            return payload
-    except (OSError, json.JSONDecodeError):
-        return None
-
-    return None
-
-
-# ── Phase 1 — resource_collection_step ───────────────────────────────────────
-
-def resource_collection_step(lat: float, lng: float, radius_miles: float = 25) -> list[dict[str, Any]]:
-    create_bounds_tool.invoke({"lat": lat, "lng": lng})
-
-    with ThreadPoolExecutor(max_workers=3) as ex:
-        food_f     = ex.submit(get_food_resources_tool.invoke,  {"lat": lat, "lng": lng, "radius_miles": radius_miles})
-        hospital_f = ex.submit(get_hospitals_tool.invoke,       {"lat": lat, "lng": lng, "radius_miles": radius_miles})
-        shelter_f  = ex.submit(get_shelters_tool.invoke,        {"lat": lat, "lng": lng, "radius_miles": radius_miles})
-
-        food_r, hospital_r, shelter_r = food_f.result(), hospital_f.result(), shelter_f.result()
-
-    flat: list[dict[str, Any]] = []
-    for r in food_r.get("resources", []):
-        flat.append({**r, "category": "food"})
-    for r in hospital_r.get("resources", []):
-        flat.append({**r, "category": "hospital"})
-    for r in shelter_r.get("resources", []):
-        flat.append({**r, "category": "shelter"})
-
-    return flat[:MAX_RESOURCES]
-
-
-# ── Phase 2a — resource_analyst_agent (single LLM call) ──────────────────────
-
-def resource_analyst_agent(resources: list[dict[str, Any]]) -> dict[str, Any]:
-    system = (
-        "You are a flood emergency resource analyst. "
-        "For each resource score BOTH safety AND availability, then write one-sentence reasoning. "
-        "Consider: resource type, flood exposure, open/closed status, capacity. "
-        "Return ONLY valid JSON — no markdown:\n"
-        '{"resources":['
-        '{"id":"string","safety_score":0.0,"safety_level":"low|moderate|high",'
-        '"availability_score":0.0,"status":"open|closed|unknown","reasoning":"string"}'
-        '],"summary":"one sentence"}'
-    )
-    user = "Resources:\n" + json.dumps(
-        [
+def _fallback_availability(resources: list[dict]) -> dict[str, Any]:
+    return {
+        "resources": [
             {
-                "id":       r["id"],
-                "name":     r["name"],
-                "category": r["category"],
-                "address":  r.get("address", ""),
-                "status":   r.get("status", "unknown"),
-                "capacity": r.get("capacity"),
-                "notes":    r.get("notes", ""),
+                "id": r["id"],
+                "availability_score": 0.5 if r.get("status") != "closed" else 0.0,
+                "status": r.get("status", "unknown"),
+                "reasoning": "Availability check unavailable; estimated from status field.",
             }
             for r in resources
-        ],
+        ]
+    }
+
+
+def _fallback_synthesis(resources: list[dict]) -> dict[str, Any]:
+    ranked = []
+
+    for r in resources:
+        status = r.get("status", "unknown")
+        score = 0.0 if status == "closed" else r.get("_combined_score", 0.5)
+
+        ranked.append({
+            "id": r["id"],
+            "overall_score": score,
+            "recommended": False,
+            "reasoning": "Synthesis unavailable; ranked by fallback score.",
+        })
+
+    ranked.sort(key=lambda x: x["overall_score"], reverse=True)
+
+    top_by_category: dict[str, list[str]] = {"hospital": [], "shelter": [], "food": []}
+    lookup = {r["id"]: r for r in resources}
+
+    for item in ranked:
+        category = lookup.get(item["id"], {}).get("category")
+        if category in top_by_category and len(top_by_category[category]) < TOP_N:
+            top_by_category[category].append(item["id"])
+            item["recommended"] = True
+
+    return {
+        "ranked_resources": ranked,
+        "top_by_category": top_by_category,
+        "summary": "Synthesis agent failed; resources ranked by fallback estimate.",
+    }
+
+
+# ── Step 1 — resource_collection_step (Python, no LLM) ───────────────────────
+
+def resource_collection_step(
+    lat: float,
+    lng: float,
+    radius_miles: float = 25,
+) -> list[dict[str, Any]]:
+    bounds = create_bounds_tool.invoke({"lat": lat, "lng": lng})
+
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        food_future     = executor.submit(get_food_resources_tool.invoke,  {"lat": lat, "lng": lng, "radius_miles": radius_miles})
+        hospital_future = executor.submit(get_hospitals_tool.invoke,       {"lat": lat, "lng": lng, "radius_miles": radius_miles})
+        shelter_future  = executor.submit(get_shelters_tool.invoke,        {"lat": lat, "lng": lng, "radius_miles": radius_miles})
+
+        food_result     = food_future.result()
+        hospital_result = hospital_future.result()
+        shelter_result  = shelter_future.result()
+
+    flat: list[dict[str, Any]] = []
+    for resource in food_result.get("resources", []):
+        flat.append({**resource, "category": "food"})
+    for resource in hospital_result.get("resources", []):
+        flat.append({**resource, "category": "hospital"})
+    for resource in shelter_result.get("resources", []):
+        flat.append({**resource, "category": "shelter"})
+
+    # Keep the closest TOP_N resources per category when available so one
+    # category does not crowd out another before ranking happens.
+    grouped: dict[str, list[dict[str, Any]]] = {"hospital": [], "shelter": [], "food": []}
+    for resource in flat:
+        category = resource.get("category", "")
+        if category in grouped:
+            grouped[category].append(resource)
+
+    selected: list[dict[str, Any]] = []
+    for category in ("hospital", "shelter", "food"):
+        grouped[category].sort(key=lambda item: item.get("distance_miles", float("inf")))
+        selected.extend(grouped[category][:TOP_N])
+
+    # If a category has fewer than TOP_N resources, we still return whatever exists.
+    # If there are extra resources beyond the category quotas, keep them as a
+    # fallback pool ordered by distance so ranking can still consider them if needed.
+    if len(selected) < len(flat):
+        selected_ids = {resource["id"] for resource in selected}
+        extras = [resource for resource in flat if resource["id"] not in selected_ids]
+        extras.sort(key=lambda item: item.get("distance_miles", float("inf")))
+        selected.extend(extras[: max(0, 10 - len(selected))])
+
+    return selected
+
+
+# ── Step 2 — resource_safety_agent (LLM) ─────────────────────────────────────
+
+def resource_safety_agent(resources: list[dict[str, Any]]) -> dict[str, Any]:
+    system = (
+        "You are a flood emergency safety analyst. "
+        "Score how safe and suitable each resource is during an active flood. "
+        "Consider: resource type, whether it serves vulnerable populations, "
+        "and whether its location is likely to be flood-affected. "
+        "Return ONLY valid JSON — no markdown:\n"
+        '{"resources":[{"id":"string","safety_score":0.0,"safety_level":"low|moderate|high","reasoning":"string"}]}'
+    )
+    user = "Resources:\n" + json.dumps(
+        [{"id": r["id"], "name": r["name"], "category": r["category"],
+          "address": r.get("address", ""), "notes": r.get("notes", "")}
+         for r in resources],
         separators=(",", ":"),
     )
     try:
-        raw = chat(system, user, max_tokens=600)
+        raw = chat(system, user)
         return parse_json_response(raw)
     except Exception as exc:
-        result = _fallback_analysis(resources)
+        result = _fallback_safety(resources)
         result["error"] = str(exc)
         return result
 
 
-# ── Phase 2b — distance_ranking_step ─────────────────────────────────────────
+# ── Step 3 — availability_agent (LLM) ────────────────────────────────────────
+
+def availability_agent(resources: list[dict[str, Any]]) -> dict[str, Any]:
+    system = (
+        "You are an emergency resource availability analyst. "
+        "Evaluate whether each resource is usable right now during a flood emergency. "
+        "Consider: open/closed status, capacity, and emergency readiness. "
+        "Return ONLY valid JSON — no markdown:\n"
+        '{"resources":[{"id":"string","availability_score":0.0,"status":"open|closed|unknown","reasoning":"string"}]}'
+    )
+    user = "Resources:\n" + json.dumps(
+        [{"id": r["id"], "name": r["name"], "status": r.get("status", "unknown"),
+          "capacity": r.get("capacity"), "notes": r.get("notes", "")}
+         for r in resources],
+        separators=(",", ":"),
+    )
+    try:
+        raw = chat(system, user)
+        return parse_json_response(raw)
+    except Exception as exc:
+        result = _fallback_availability(resources)
+        result["error"] = str(exc)
+        return result
+
+
+# ── Step 4 — distance_ranking_step (Python) ───────────────────────────────────
 
 def _haversine_miles(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     r = 3_958.8
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
-    dphi    = math.radians(lat2 - lat1)
+    dphi = math.radians(lat2 - lat1)
     dlambda = math.radians(lng2 - lng1)
     a = math.sin(dphi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
     return r * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
-def distance_ranking_step(resources: list[dict[str, Any]], user_lat: float, user_lng: float) -> list[dict[str, Any]]:
+def distance_ranking_step(
+    resources: list[dict[str, Any]],
+    user_lat: float,
+    user_lng: float,
+) -> list[dict[str, Any]]:
     enriched = []
     for r in resources:
         dist = _haversine_miles(user_lat, user_lng, r.get("lat", user_lat), r.get("lng", user_lng))
@@ -164,113 +233,148 @@ def distance_ranking_step(resources: list[dict[str, Any]], user_lat: float, user
     return enriched
 
 
-# ── Phase 3 — python_scoring_step ────────────────────────────────────────────
+# ── Step 5 — resource_synthesis_agent (Python scoring + LLM reasoning) ────────
 
-def python_scoring_step(
+def _compute_overall_score(
+    r: dict[str, Any],
+    safety_map: dict[str, dict],
+    availability_map: dict[str, dict],
+) -> float:
+    rid = r["id"]
+    safety_score       = safety_map.get(rid, {}).get("safety_score", 0.5)
+    availability_score = availability_map.get(rid, {}).get("availability_score", 0.5)
+    distance_score     = r.get("distance_score", 0.5)
+    status             = availability_map.get(rid, {}).get("status", r.get("status", "unknown"))
+    category           = r.get("category", "food")
+
+    base = (
+        safety_score       * _WEIGHTS["safety"] +
+        availability_score * _WEIGHTS["availability"] +
+        distance_score     * _WEIGHTS["distance"]
+    )
+    score = base * _CATEGORY_MULTIPLIER.get(category, 1.0)
+
+    if status == "closed":
+        score *= 0.1
+
+    return round(min(score, 1.0), 4)
+
+
+def resource_synthesis_agent(
     resources: list[dict[str, Any]],
-    analysis_map: dict[str, dict],
+    safety_map: dict[str, dict],
+    availability_map: dict[str, dict],
 ) -> dict[str, Any]:
     scored = []
     for r in resources:
-        rid    = r["id"]
-        info   = analysis_map.get(rid, {})
-        status = info.get("status", r.get("status", "unknown"))
-
-        safety_score       = info.get("safety_score",       0.5)
-        availability_score = info.get("availability_score", 0.5)
-        distance_score     = r.get("distance_score",        0.5)
-        category           = r.get("category", "food")
-
-        base  = (
-            safety_score       * _WEIGHTS["safety"] +
-            availability_score * _WEIGHTS["availability"] +
-            distance_score     * _WEIGHTS["distance"]
-        )
-        score = base * _CATEGORY_MULTIPLIER.get(category, 1.0)
-        if status == "closed":
-            score *= 0.1
-
         scored.append({
             **r,
-            "overall_score":      round(min(score, 1.0), 4),
-            "safety_score":       safety_score,
-            "availability_score": availability_score,
-            "status":             status,
-            "reasoning":          info.get("reasoning", f"Score estimated from safety, availability, and distance."),
+            "overall_score":      _compute_overall_score(r, safety_map, availability_map),
+            "safety_score":       safety_map.get(r["id"], {}).get("safety_score", 0.5),
+            "availability_score": availability_map.get(r["id"], {}).get("availability_score", 0.5),
+            "status":             availability_map.get(r["id"], {}).get("status", r.get("status", "unknown")),
         })
 
     scored.sort(key=lambda x: x["overall_score"], reverse=True)
 
     top_by_category: dict[str, list[str]] = {"hospital": [], "shelter": [], "food": []}
-    top_ids: set[str] = set()
     for r in scored:
         cat = r.get("category")
         if cat in top_by_category and len(top_by_category[cat]) < TOP_N:
             top_by_category[cat].append(r["id"])
-            top_ids.add(r["id"])
 
+    slim = [
+        {
+            "id":             r["id"],
+            "name":           r["name"],
+            "category":       r["category"],
+            "overall_score":  r["overall_score"],
+            "status":         r["status"],
+            "distance_miles": r.get("distance_miles", 0),
+        }
+        for r in scored
+    ]
+
+    system = (
+        "You are a flood emergency resource analyst. "
+        "The scores have already been calculated. "
+        "Write a short one-sentence reasoning for each resource explaining why it scored as it did, "
+        "and a one-sentence overall summary. "
+        "Return ONLY valid JSON — no markdown, no calculations:\n"
+        '{"reasonings":{"<id>":"<one sentence>"},"summary":"<one sentence>"}'
+    )
+    user = json.dumps(slim, separators=(",", ":"))
+
+    try:
+        raw = chat(system, user)
+        llm_out    = parse_json_response(raw)
+        reasonings: dict[str, str] = llm_out.get("reasonings", {})
+        summary: str = llm_out.get("summary", "Resources ranked by flood emergency suitability.")
+    except Exception:
+        reasonings = {}
+        summary    = "Resources ranked by flood emergency suitability."
+
+    top_ids = {rid for ids in top_by_category.values() for rid in ids}
     ranked_resources = [
         {
             "id":            r["id"],
             "overall_score": r["overall_score"],
             "recommended":   r["id"] in top_ids,
-            "reasoning":     r["reasoning"],
+            "reasoning":     reasonings.get(
+                r["id"],
+                f"Score {r['overall_score']:.2f} based on safety, availability, and distance.",
+            ),
         }
         for r in scored
     ]
 
     return {
-        "scored":           scored,
         "ranked_resources": ranked_resources,
         "top_by_category":  top_by_category,
+        "summary":          summary,
     }
 
 
-# ── Phase 4 — response_formatter_step ────────────────────────────────────────
+# ── Step 6 — response_formatter_step (Python) ────────────────────────────────
 
 def response_formatter_step(
-    scored: list[dict[str, Any]],
-    ranked_resources: list[dict],
-    top_by_category: dict[str, list[str]],
-    summary: str,
+    resources: list[dict[str, Any]],
+    safety_map: dict[str, dict],
+    availability_map: dict[str, dict],
+    synthesis: dict[str, Any],
 ) -> dict[str, Any]:
-    resource_lookup = {r["id"]: r for r in scored}
-    rank_lookup     = {r["id"]: r for r in ranked_resources}
+    if synthesis is None:
+        synthesis = _fallback_synthesis(resources)
 
-    def build_top(category: str) -> list[dict]:
-        results = []
-        for rid in top_by_category.get(category, []):
-            base = resource_lookup.get(rid, {})
-            rank = rank_lookup.get(rid, {})
-            if base and rank:
-                results.append({
-                    "id":             rid,
-                    "name":           base.get("name", "Unknown"),
-                    "type":           base.get("category", "unknown"),
-                    "lat":            base.get("lat", 0),
-                    "lng":            base.get("lng", 0),
-                    "distance_miles": base.get("distance_miles", 0),
-                    "overall_score":  rank.get("overall_score", 0),
-                    "status":         base.get("status", "unknown"),
-                    "reasoning":      rank.get("reasoning", ""),
-                })
-        return results
+    resource_lookup  = {r["id"]: r for r in resources}
+    ranked_raw       = synthesis.get("ranked_resources", [])
+    top_by_category  = synthesis.get("top_by_category", {"hospital": [], "shelter": [], "food": []})
 
-    all_ranked = []
-    for rank in ranked_resources:
-        rid  = rank["id"]
+    ranked_resources = []
+    for item in ranked_raw:
+        rid  = item.get("id")
         base = resource_lookup.get(rid, {})
-        all_ranked.append({
+        ranked_resources.append({
             "id":             rid,
             "name":           base.get("name", "Unknown"),
             "type":           base.get("category", "unknown"),
             "lat":            base.get("lat", 0),
             "lng":            base.get("lng", 0),
             "distance_miles": base.get("distance_miles", 0),
-            "overall_score":  rank.get("overall_score", 0),
-            "status":         base.get("status", "unknown"),
-            "reasoning":      rank.get("reasoning", ""),
+            "overall_score":  item.get("overall_score", 0),
+            "status":         availability_map.get(rid, {}).get("status", base.get("status", "unknown")),
+            "reasoning":      item.get("reasoning", ""),
         })
+
+    ranked_resources.sort(key=lambda x: x["overall_score"], reverse=True)
+
+    def build_top(category: str) -> list[dict]:
+        results = []
+        for rid in top_by_category.get(category, []):
+            ranked_item = next((r for r in ranked_resources if r["id"] == rid), None)
+            if resource_lookup.get(rid) and ranked_item:
+                results.append(ranked_item)
+        return results
 
     return {
         "recommended_resources": {
@@ -278,71 +382,49 @@ def response_formatter_step(
             "shelter":  build_top("shelter"),
             "food":     build_top("food"),
         },
-        "ranked_resources": all_ranked,
-        "summary":          summary,
+        "ranked_resources": ranked_resources,
+        "summary":          synthesis.get("summary", ""),
         "generated_at":     datetime.now(timezone.utc).isoformat(),
     }
 
 
-def _save_agent_response(payload: dict[str, Any]) -> None:
-    try:
-        AGENT_RESPONSE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with AGENT_RESPONSE_PATH.open("w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2, ensure_ascii=False)
-    except OSError:
-        pass
+# ── Main entry point ──────────────────────────────────────────────────────────
 
-
-# ── Entry point ───────────────────────────────────────────────────────────────
-
-def emergency_resource_agent(lat: float, lng: float) -> dict[str, Any]:
+def emergency_resource_agent(lat, lng) -> dict[str, Any]:
+    # Check cache first — rounds to ~1km precision
     key = f"{round(lat, 2)},{round(lng, 2)}"
-    cached = _load_cached_response(key)
-    if cached is not None:
-        result = cached
-        return result
+    if key in _cache:
+        return _cache[key]
 
     resources = resource_collection_step(lat, lng)
 
     if not resources:
-        result = {
-            "cache_key":              key,
-            "requested_location":     {"lat": lat, "lng": lng},
+        return {
             "recommended_resources": {"hospital": [], "shelter": [], "food": []},
             "ranked_resources":      [],
             "summary":               "No emergency resources found near this location.",
             "generated_at":          datetime.now(timezone.utc).isoformat(),
         }
-        _save_agent_response(result)
-        _cache[key] = result
-        return result
 
-    # Phase 2: LLM analysis and distance math run in parallel
-    with ThreadPoolExecutor(max_workers=2) as ex:
-        analysis_future = ex.submit(resource_analyst_agent, resources)
-        distance_future = ex.submit(distance_ranking_step, resources, lat, lng)
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        safety_future       = executor.submit(resource_safety_agent, resources)
+        availability_future = executor.submit(availability_agent, resources)
+        distance_future     = executor.submit(distance_ranking_step, resources, lat, lng)
 
-        analysis_result = analysis_future.result()
-        resources       = distance_future.result()
+        safety_result       = safety_future.result()
+        availability_result = availability_future.result()
+        resources           = distance_future.result()
 
-    analysis_map: dict[str, dict] = {
-        r["id"]: r for r in analysis_result.get("resources", [])
+    safety_map: dict[str, dict] = {
+        r["id"]: r for r in safety_result.get("resources", [])
     }
-    summary = analysis_result.get("summary", "Resources ranked by flood emergency suitability.")
+    availability_map: dict[str, dict] = {
+        r["id"]: r for r in availability_result.get("resources", [])
+    }
 
-    # Phase 3: pure Python scoring
-    scoring = python_scoring_step(resources, analysis_map)
+    synthesis = resource_synthesis_agent(resources, safety_map, availability_map)
+    final     = response_formatter_step(resources, safety_map, availability_map, synthesis)
 
-    # Phase 4: format response
-    result = response_formatter_step(
-        scored           = scoring["scored"],
-        ranked_resources = scoring["ranked_resources"],
-        top_by_category  = scoring["top_by_category"],
-        summary          = summary,
-    )
-
-    result["cache_key"] = key
-    result["requested_location"] = {"lat": lat, "lng": lng}
-    _save_agent_response(result)
+    result = {**final}
     _cache[key] = result
     return result
