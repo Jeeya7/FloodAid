@@ -16,11 +16,7 @@ class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
   LatLng? _userLocation;
   bool _loading = true;
-
-  // Risk
-  String _riskLevel = 'low'; // 'high', 'moderate', 'low'
-
-  // Resource markers
+  String _riskLevel = 'low';
   List<Marker> _resourceMarkers = [];
 
   @override
@@ -47,7 +43,6 @@ class _MapScreenState extends State<MapScreen> {
 
       _mapController.move(_userLocation!, 12.0);
 
-      // Call both APIs
       await Future.wait([
         _fetchRisk(position.latitude, position.longitude),
         _fetchResources(position.latitude, position.longitude),
@@ -204,10 +199,8 @@ class _MapScreenState extends State<MapScreen> {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.floodaid.app',
               ),
-              // Resource markers
               if (_resourceMarkers.isNotEmpty)
                 MarkerLayer(markers: _resourceMarkers),
-              // User location
               if (_userLocation != null)
                 MarkerLayer(
                   markers: [
@@ -226,7 +219,6 @@ class _MapScreenState extends State<MapScreen> {
             ],
           ),
 
-          // Risk banner at top
           Positioned(
             top: 0,
             left: 0,
@@ -246,11 +238,9 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
 
-          // Loading spinner
           if (_loading)
             const Center(child: CircularProgressIndicator()),
 
-          // Re-center button
           Positioned(
             bottom: 20,
             right: 16,
@@ -264,41 +254,6 @@ class _MapScreenState extends State<MapScreen> {
               child: const Icon(Icons.my_location, color: Colors.white),
             ),
           ),
-
-          // Legend
-          Positioned(
-            bottom: 90,
-            right: 16,
-            child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 6)],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _legendItem(Icons.local_hospital, Colors.red, 'Hospital'),
-                  _legendItem(Icons.fastfood, Colors.orange, 'Food Bank'),
-                  _legendItem(Icons.home, Colors.blue, 'Shelter'),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _legendItem(IconData icon, Color color, String label) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 16),
-          const SizedBox(width: 6),
-          Text(label, style: const TextStyle(fontSize: 11)),
         ],
       ),
     );
