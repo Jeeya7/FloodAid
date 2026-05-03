@@ -33,6 +33,8 @@ Flood risk is computed using public APIs:
 * Rainfall forecast severity
 * Alert conditions
 
+![Map interface of FloodAid with markers for nearby resource and overlaid color-coded flood risk](frontend/floodaid/assets/map.png)
+
 ### Emergency Resource Finder
 
 The resources tab calls backend in real time, passing user's GPS coordinates.
@@ -40,6 +42,15 @@ The resources tab calls backend in real time, passing user's GPS coordinates.
 It returns a ranked list of hospitals, urgent care clinics, shelters, and food banks sorted by distance from user location. 
 
 Each card shows the facility name, type, address, and distance in miles.
+
+Food resources
+![Nearby food resources presented by FloodAid](frontend/floodaid/assets/food.png)
+
+Shelters
+![Nearby shelters presented by FloodAid](frontend/floodaid/assets/shelter.png)
+
+Hospitals
+![Nearby hospital presented by FloodAid](frontend/floodaid/assets/hospitals.png)
 
 ### Droppy — AI Support Chatbot
 
