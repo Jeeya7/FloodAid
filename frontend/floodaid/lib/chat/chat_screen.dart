@@ -33,7 +33,7 @@ class _ChatScreenState extends State<ChatScreen> {
     'Show me the evacuation route',
   ];
 
-  static const String _backendUrl = 'http://localhost:8000';
+  static const String _backendUrl = 'http://127.0.0.1:8000';
 
   Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
