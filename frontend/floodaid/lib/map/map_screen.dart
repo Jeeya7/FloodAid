@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -21,15 +23,26 @@ class _MapScreenState extends State<MapScreen> {
     _getLocation();
   }
 
+  Future<void> _callBackend(double lat, double lng) async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:8000/resources'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'latitude': lat, 'longitude': lng}),
+      );
+      print('Backend: ${response.body}');
+    } catch (e) {
+      print('Backend error: $e');
+    }
+  }
+
   Future<void> _getLocation() async {
     try {
-      // Check permission
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
 
-      // Get position
       final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
@@ -39,11 +52,12 @@ class _MapScreenState extends State<MapScreen> {
         _loading = false;
       });
 
-      // Move map to user location
       _mapController.move(_userLocation!, 12.0);
 
+      // Send coordinates to backend
+      await _callBackend(position.latitude, position.longitude);
+
     } catch (e) {
-      // If location fails, just show USA map
       setState(() => _loading = false);
     }
   }
@@ -76,7 +90,6 @@ class _MapScreenState extends State<MapScreen> {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.floodaid.app',
               ),
-              // Show blue dot for user location
               if (_userLocation != null)
                 MarkerLayer(
                   markers: [
@@ -95,13 +108,9 @@ class _MapScreenState extends State<MapScreen> {
             ],
           ),
 
-          // Loading spinner while getting location
           if (_loading)
-            const Center(
-              child: CircularProgressIndicator(),
-            ),
+            const Center(child: CircularProgressIndicator()),
 
-          // Re-center button
           Positioned(
             bottom: 20,
             right: 16,
