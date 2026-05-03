@@ -1,4 +1,5 @@
 # FloodAid 🌊
+![The logo of FloodAid: a cute water droplet with a life vest](frontend/floodaid/assets/logo.svg "Droppy!")
 
 AI-powered flood risk intelligence and emergency response coordination for communities across the United States.
 
@@ -20,14 +21,6 @@ Every year, floods kill hundreds of Americans and displace hundreds of thousands
 Existing tools like weather apps and FEMA alerts tell residents that there is a flood. FloodAid tells them what to do about it, where to go, and how to get there safely — all while providing calm emotional support through our AI chatbot, Droppy.
 
 ## Features
-
-### Real-Time Hydrology Monitoring
-
-Pulls live streamflow and water level data from United States Geological Survey (USGS) gauge stations nationwide.
-
-### Weather Intelligence
-
-Integrates National Oceanic and Atmospheric Administration (NOAA) weather forecasts and active weather alerts.
 
 ### Interactive Flood Risk Map
 
@@ -56,37 +49,17 @@ Droppy is powered by the NVIDIA Nemotron API and uses a custom system prompt tha
 
 Droppy provides calm and understanding guidance during stressful these stressful events.
 
-## Multi-Agent Architecture
+![Screenshot of the chatbot Droppy in action. It answer user's questions, provides information on the nearest shelter and food resources, and periodically reassures the user](frontend/floodaid/assets/proof_droppy.png "Droppy in action")
 
-FloodAid is structured as cooperating agents for:
-
-* Hydrology analysis
-* Weather analysis
-* Feature engineering
-* Risk fusion
-* Routing intelligence
-
----
 
 ## Architecture
 
-```text
-User Location
-    ↓
-Spatial Gauge Resolution
-    ↓
-USGS Hydrology Agent
-    ↓
-NOAA Weather Agent
-    ↓
-Feature Engineering Agent
-    ↓
-Flood Risk Fusion Agent
-    ↓
-Emergency Routing + Resource Recommendation
-```
+### System architecture
+![](frontend/floodaid/assets/system_architecture.png)
 
----
+### Agent pipeline
+![](frontend/floodaid/assets/agent_flow.png)
+
 
 ## Tech Stack
 
@@ -212,10 +185,10 @@ Our long-term vision includes:
 
 | Name | Role |
 |----------|----------|
-| Jiya Pradhan | Flutter (Dart) |
-| Jayasnehasree Sannidhi | flutter_map + OpenStreetMap |
-| Saranya Sounder Rajan | geolocator package |
-| Ngoc Le | OpenRouter API (Nvidia Nemotron) |
+| Jiya Pradhan | lorem ipsum |
+| Jayasnehasree Sannidhi | lorem ipsum |
+| Saranya Sounder Rajan | lorem ipsum |
+| Ngoc Le | lorem ipsum |
 
 
 ---
