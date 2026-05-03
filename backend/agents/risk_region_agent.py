@@ -5,7 +5,6 @@
 # Flow:
 #   1. Python calls the tools/services to collect raw environmental data.
 #   2. data_quality_agent  — checks data completeness and flags issues.
-#   3. hydrology_agent     — analyzes water-level, streamflow, and trend risk.
 #   4. weather_risk_agent  — analyzes rainfall, forecast, and alert risk.
 #   5. risk_synthesis_agent — combines all evidence into a final risk verdict.
 #   6. response_formatter_agent — shapes everything into frontend-ready JSON.
@@ -51,16 +50,6 @@ def _fallback_data_quality() -> dict[str, Any]:
         "confidence_modifier": 0.7,
     }
 
-
-def _fallback_hydrology() -> dict[str, Any]:
-    return {
-        "hydrology_risk": "moderate",
-        "hydrology_evidence": ["Hydrology analysis unavailable."],
-        "trend": "unknown",
-        "reasoning_summary": "Hydrology agent failed; defaulting to moderate risk.",
-    }
-
-
 def _fallback_weather() -> dict[str, Any]:
     return {
         "weather_risk": "moderate",
@@ -70,11 +59,10 @@ def _fallback_weather() -> dict[str, Any]:
     }
 
 
-def _fallback_synthesis(hydro: dict, weather: dict) -> dict[str, Any]:
+def _fallback_synthesis(weather: dict) -> dict[str, Any]:
     # Pick the worse of the two available risk levels
     order = ["low", "moderate", "high", "critical"]
     level = max(
-        hydro.get("hydrology_risk", "moderate"),
         weather.get("weather_risk", "moderate"),
         key=lambda x: order.index(x) if x in order else 1,
     )
@@ -108,34 +96,6 @@ def data_quality_agent(raw_packet: dict[str, Any]) -> dict[str, Any]:
     except Exception as exc:
         return {**_fallback_data_quality(), "data_warnings": [f"Data quality check error: {exc}"]}
 
-
-def hydrology_agent(raw_packet: dict[str, Any], quality: dict[str, Any]) -> dict[str, Any]:
-    """
-    Analyze water-level, streamflow, discharge, and trends.
-    Uses the data quality modifier to adjust confidence.
-    """
-    system = (
-        "You are a hydrology risk analyst for a flood-safety system. "
-        "Analyze the USGS and water services data. Focus on: gage height vs flood stage, "
-        "streamflow percentile, water level trend, and anomaly level. "
-        "Return ONLY valid JSON — no markdown:\n"
-        '{"hydrology_risk":"low|moderate|high|critical",'
-        '"hydrology_evidence":[],"trend":"rising|stable|falling|unknown",'
-        '"reasoning_summary":"string"}'
-    )
-    user = (
-        f"USGS data: {json.dumps(raw_packet.get('usgs', {}), separators=(',', ':'))}\n"
-        f"Streamflow: {json.dumps(raw_packet.get('water_services', {}), separators=(',', ':'))}\n"
-        f"Data quality confidence modifier: {quality.get('confidence_modifier', 1.0)}"
-    )
-
-    try:
-        raw = chat(system, user)
-        return parse_json_response(raw)
-    except Exception as exc:
-        return {**_fallback_hydrology(), "hydrology_evidence": [f"Hydrology agent error: {exc}"]}
-
-
 def weather_risk_agent(raw_packet: dict[str, Any], quality: dict[str, Any]) -> dict[str, Any]:
     """
     Analyze rainfall forecasts, current precipitation, and NWS alerts.
@@ -164,11 +124,10 @@ def weather_risk_agent(raw_packet: dict[str, Any], quality: dict[str, Any]) -> d
 def risk_synthesis_agent(
     gauge: dict[str, Any],
     quality: dict[str, Any],
-    hydro: dict[str, Any],
     weather: dict[str, Any],
 ) -> dict[str, Any]:
     """
-    Combine data quality, hydrology risk, and weather risk into a final verdict.
+    Combine data quality and weather risk into a final verdict.
     """
     system = (
         "You are a flood risk synthesis analyst. "
@@ -183,7 +142,6 @@ def risk_synthesis_agent(
     user = (
         f"Location: {gauge['name']} \n"
         f"Data quality: {json.dumps(quality, separators=(',', ':'))}\n"
-        f"Hydrology: {json.dumps(hydro, separators=(',', ':'))}\n"
         f"Weather: {json.dumps(weather, separators=(',', ':'))}"
     )
 
@@ -191,7 +149,7 @@ def risk_synthesis_agent(
         raw = chat(system, user)
         return parse_json_response(raw)
     except Exception as exc:
-        result = _fallback_synthesis(hydro, weather)
+        result = _fallback_synthesis(weather)
         result["reasoning_summary"] += f" (Synthesis error: {exc})"
         return result
 
@@ -199,7 +157,6 @@ def risk_synthesis_agent(
 def response_formatter_agent(
     gauge: dict[str, Any],
     quality: dict[str, Any],
-    hydro: dict[str, Any],
     weather: dict[str, Any],
     synthesis: dict[str, Any],
 ) -> dict[str, Any]:
@@ -219,7 +176,6 @@ def response_formatter_agent(
         "confidence": synthesis.get("confidence", 0.5),
         "evidence": {
             "data_quality": quality,
-            "hydrology": hydro,
             "weather": weather,
         },
         "reasoning_summary": synthesis.get("reasoning_summary", ""),
@@ -262,18 +218,16 @@ def _process_gauge(gauge: dict[str, Any]) -> tuple[dict, dict]:
         "raw_packet": raw_packet,
     }
 
-    # quality must finish before hydro/weather can start
+    # quality must finish before weather can start
     quality = data_quality_agent(raw_packet)
 
-    # hydro and weather are independent — run them concurrently
+    # weather are independent — run them concurrently
     with ThreadPoolExecutor(max_workers=2) as executor:
-        hydro_future   = executor.submit(hydrology_agent,    raw_packet, quality)
         weather_future = executor.submit(weather_risk_agent, raw_packet, quality)
-        hydro   = hydro_future.result()
         weather = weather_future.result()
 
-    synthesis = risk_synthesis_agent(gauge, quality, hydro, weather)
-    region    = response_formatter_agent(gauge, quality, hydro, weather, synthesis)
+    synthesis = risk_synthesis_agent(gauge, quality, weather)
+    region    = response_formatter_agent(gauge, quality, weather, synthesis)
 
     return region, env_packet
 
