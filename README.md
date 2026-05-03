@@ -191,6 +191,11 @@ This starts both the backend server and the Flutter app simultaneously. Press Ct
 
 ## Hackathon
 
+FloodAid was built in under 24 hours at BeaverHacks 2026 by a team of four students passionate about using AI for real-world impact. We chose floods because they are one of the most common and deadly natural disasters in the United States — and because existing flood apps tell you what is happening, but not what to do about it.
+
+FloodAid changes that. It does not just show you a flood map. It reasons about your specific situation, finds the resources closest to you that are actually safe to reach, and guides you there with calm, human-centered language — even if you are scared, even if you have never evacuated before.
+
+
 ### Vision
 FloodAid aims to make flood intelligence accessible, interpretable, and actionable for both emergency responders and local communities.
 
@@ -207,10 +212,10 @@ Our long-term vision includes:
 
 | Name | Role |
 |----------|----------|
-| Mobile Frontend | Flutter (Dart) |
-| Map | flutter_map + OpenStreetMap |
-| GPS | geolocator package |
-| LLM | OpenRouter API (Nvidia Nemotron) |
+| Jiya Pradhan | Flutter (Dart) |
+| Jayasnehasree Sannidhi | flutter_map + OpenStreetMap |
+| Saranya Sounder Rajan | geolocator package |
+| Ngoc Le | OpenRouter API (Nvidia Nemotron) |
 
 
 ---
