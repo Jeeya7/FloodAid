@@ -296,6 +296,8 @@ def get_environmental_data(lat: float, lng: float, station_id: str) -> dict[str,
     Unified hydrology + weather state for agent system
     """
 
+    print("GET ENVINRONMENTAL DATA CALLED")
+
     iv = get_usgs_iv_data(station_id)
     dv = get_usgs_dv_data(station_id)
 
@@ -518,7 +520,6 @@ def get_gauges_by_bounds(bounds: dict[str, float] | None = None) -> list[dict[st
             print(f"Skipping malformed station: {e}")
             continue
 
-    print(f"stations: {stations}")
     return stations
 
 

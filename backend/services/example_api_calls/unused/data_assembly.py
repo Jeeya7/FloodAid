@@ -28,7 +28,7 @@ def main():
     # Step 1: Load real USGS station network
     # -------------------------------------------------
     print("📡 Loading USGS station network...")
-    stations = get_all_usgs_stations()
+    stations = get_all_usgs_stations(bounds)
 
     print(f"✅ Loaded {len(stations)} stations")
 
