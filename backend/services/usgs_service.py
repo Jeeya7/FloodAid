@@ -164,6 +164,14 @@ _MOCK_WATER_DATA: dict[str, dict[str, Any]] = {
         "percentile_rank": 30,
         "water_level_trend": "steady",
     },
+    "11490000": {
+        "station_id": "11490000",
+        "gage_height_ft": 9.8,
+        "flood_stage_ft": 12.0,
+        "streamflow_cfs": 5_600,
+        "percentile_rank": 68,
+        "water_level_trend": "rising",
+    },
 }
 
 
