@@ -7,6 +7,7 @@ load_dotenv()  # must be called before any agent import reads env vars
 from agents.emergency_resource_agent import emergency_resource_agent
 from agents.risk_region_agent import risk_region_agent
 
+
 LAT = 44.63
 LNG = -124.05
 

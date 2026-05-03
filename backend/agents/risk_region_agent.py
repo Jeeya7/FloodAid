@@ -17,7 +17,7 @@ import json
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from openrouter_client import chat, parse_json_response
 from tools.risk_region_tools import (
@@ -228,13 +228,49 @@ def response_formatter_agent(
     }
 
 
-def _save_agent_response(payload: dict[str, Any]) -> None:
-    try:
-        AGENT_RESPONSE_PATH.parent.mkdir(parents=True, exist_ok=True)
-        with AGENT_RESPONSE_PATH.open("w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2, ensure_ascii=False)
-    except OSError:
-        pass
+
+# ── Per-gauge pipeline ────────────────────────────────────────────────────────
+
+def _process_gauge(gauge: dict[str, Any]) -> tuple[dict, dict]:
+    """Run the full pipeline for a single gauge and return (region, env_packet)."""
+    sid = gauge["site_id"]
+
+    # Fetch all three data sources concurrently (unchanged from original)
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        usgs_future          = executor.submit(get_usgs_water_data_tool.invoke,    {"station_id": sid})
+        water_services_future = executor.submit(get_streamflow_context_tool.invoke, {"station_id": sid})
+        weather_future        = executor.submit(get_weather_context_tool.invoke,    {"lat": gauge["lat"], "lng": gauge["lng"]})
+
+        raw_packet = {
+            "usgs":           usgs_future.result(),
+            "water_services": water_services_future.result(),
+            "weather":        weather_future.result(),
+        }
+
+    env_packet = {
+        "area_id":    sid,
+        "name":       gauge["name"],
+        # "river_name": gauge["river_name"],
+        "river_name": "",
+        "center":     {"lat": gauge["lat"], "lng": gauge["lng"]},
+        "raw_packet": raw_packet,
+    }
+
+    # quality must finish before hydro/weather can start
+    quality = data_quality_agent(raw_packet)
+
+    # hydro and weather are independent — run them concurrently
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        hydro_future   = executor.submit(hydrology_agent,    raw_packet, quality)
+        weather_future = executor.submit(weather_risk_agent, raw_packet, quality)
+        hydro   = hydro_future.result()
+        weather = weather_future.result()
+
+    synthesis = risk_synthesis_agent(gauge, quality, hydro, weather)
+    region    = response_formatter_agent(gauge, quality, hydro, weather, synthesis)
+
+    return region, env_packet
+
 
 
 # ── Main entry point ──────────────────────────────────────────────────────────
@@ -254,60 +290,21 @@ def risk_region_agent(lat: float, lng: float, radius_miles: float = 25) -> dict[
         "radius_miles": radius_miles,
     })
 
-    # ── Step 1: collect raw data (Python, no LLM) ────────────────────────────
     gauges = get_gauges_by_bounds_tool.invoke({"bounds": bounds})
     gauges = gauges[:MAX_GAUGES]
 
-    environmental_risk_packets: list[dict] = []
-    regions: list[dict] = []
+    # Run all gauge pipelines concurrently; preserve original order
+    regions      = [None] * len(gauges)
+    env_packets  = [None] * len(gauges)
 
-    for gauge in gauges:
-        sid = gauge["site_id"]
-        with ThreadPoolExecutor(max_workers=3) as executor:
-            usgs_future = executor.submit(
-                get_usgs_water_data_tool.invoke,
-                {"station_id": sid},
-            )
-
-            water_services_future = executor.submit(
-                get_streamflow_context_tool.invoke,
-                {"station_id": sid},
-            )
-
-            weather_future = executor.submit(
-                get_weather_context_tool.invoke,
-                {"lat": gauge["lat"], "lng": gauge["lng"]},
-            )
-
-            raw_packet = {
-                "usgs": usgs_future.result(),
-                "water_services": water_services_future.result(),
-                "weather": weather_future.result(),
-            }
-
-        # Store the full packet for transparency
-        environmental_risk_packets.append({
-            "area_id":    sid,
-            "name":       gauge["name"],
-            # "river_name": gauge["river_name"],
-            "river_name": "",
-            "center":     {"lat": gauge["lat"], "lng": gauge["lng"]},
-            "raw_packet": raw_packet,
-        })
-
-
-        # ── Steps 2–5: sub-agent reasoning (LLM calls) ───────────────────────
-        quality   = data_quality_agent(raw_packet)
-
-        hydro     = hydrology_agent(raw_packet, quality)
-
-        weather   = weather_risk_agent(raw_packet, quality)
-
-        synthesis = risk_synthesis_agent(gauge, quality, hydro, weather)
-
-        # ── Step 6: format ────────────────────────────────────────────────────
-        region = response_formatter_agent(gauge, quality, hydro, weather, synthesis)
-        regions.append(region)
+    with ThreadPoolExecutor(max_workers=MAX_GAUGES) as executor:
+        future_to_index = {
+            executor.submit(_process_gauge, gauge): i
+            for i, gauge in enumerate(gauges)
+        }
+        for future in as_completed(future_to_index):
+            i = future_to_index[future]
+            regions[i], env_packets[i] = future.result()
 
     # ── Build overall summary (single extra LLM call) ────────────────────────
     summary = _build_summary(regions)
@@ -317,7 +314,7 @@ def risk_region_agent(lat: float, lng: float, radius_miles: float = 25) -> dict[
         "lang": lng,
         "raidus": radius_miles,
         "regions": regions,
-        "environmental_risk_packets": environmental_risk_packets,
+        "environmental_risk_packets": env_packets,
         "summary": summary,
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
