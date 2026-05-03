@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../map/map_screen.dart';
 import '../chat/chat_screen.dart';
+import '../resources/resources_screen.dart';
 
 class MainShell extends StatefulWidget {
   const MainShell({super.key});
@@ -15,7 +16,7 @@ class _MainShellState extends State<MainShell> {
   final List<Widget> _screens = [
     const MapScreen(),
     const ChatScreen(),
-    const Scaffold(body: Center(child: Text('Resources coming soon'))),
+    const ResourcesScreen(),
   ];
 
   @override

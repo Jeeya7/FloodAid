@@ -2,188 +2,188 @@
   "recommended_resources": {
     "hospital": [
       {
-        "id": "463367491",
-        "name": "Samaritan Pacific Communities Hospital",
+        "id": "13152039635",
+        "name": "Student Health Services Tebeau Hall Clinic",
         "type": "hospital",
-        "lat": 44.6287918,
-        "lng": -124.0594538,
-        "distance_miles": 0.47,
-        "overall_score": 1.0,
+        "lat": 44.5627319,
+        "lng": -123.2727889,
+        "distance_miles": 0.43,
+        "overall_score": 0.9573,
         "status": "open",
-        "reasoning": "It scored 1.0 as an open hospital located just 0.47 miles away, ensuring immediate medical care."
+        "reasoning": "It scored highly because it is open, very close (0.43 miles), and classified as a hospital."
       },
       {
-        "id": "1080968252",
-        "name": "Willamette Valley Cancer Institute and Research Center",
+        "id": "126638106",
+        "name": "The Corvallis Clinic Walnut",
         "type": "hospital",
-        "lat": 44.6521253,
-        "lng": -124.0537676,
-        "distance_miles": 1.54,
-        "overall_score": 1.0,
+        "lat": 44.5932357,
+        "lng": -123.2786125,
+        "distance_miles": 1.82,
+        "overall_score": 0.9487,
         "status": "open",
-        "reasoning": "It scored 1.0 due to being an open hospital within a short distance of 1.54 miles, providing reliable health services."
+        "reasoning": "Its high score reflects being open, relatively close (1.82 miles), and a hospital facility."
       },
       {
-        "id": "549829765",
-        "name": "Siletz Community Health Clinic",
+        "id": "10783308189",
+        "name": "Corvallis Clinic Surgery Center",
         "type": "hospital",
-        "lat": 44.7212341,
-        "lng": -123.9044247,
-        "distance_miles": 9.53,
-        "overall_score": 1.0,
+        "lat": 44.6017925,
+        "lng": -123.2554625,
+        "distance_miles": 2.67,
+        "overall_score": 0.9434,
         "status": "open",
-        "reasoning": "It scored 1.0 as an open hospital, even though it is 9.53 miles distant, its operational status guarantees dependable care."
+        "reasoning": "The score is high due to its open status, moderate distance (2.67 miles), and hospital category."
       }
     ],
     "shelter": [],
     "food": [
       {
-        "id": "food-002",
-        "name": "Toledo Food Pantry - Food Distribution Center",
+        "id": "food-003",
+        "name": "Oregon Coast Emergency Food Bank",
         "type": "food",
-        "lat": 44.6224694,
-        "lng": -123.934616,
-        "distance_miles": 5.7,
-        "overall_score": 1.0,
-        "status": "unknown",
-        "reasoning": "It scored 1.0 as a food pantry with unknown status but a relatively close distance of 5.7 miles, indicating high accessibility."
+        "lat": 44.629,
+        "lng": -124.06,
+        "distance_miles": 38.65,
+        "overall_score": 0.48,
+        "status": "open",
+        "reasoning": "The lower score stems from being open but far away (38.65 miles) and belonging to the food category."
+      },
+      {
+        "id": "food-002",
+        "name": "Lincoln County Meal Site",
+        "type": "food",
+        "lat": 44.6412,
+        "lng": -124.051,
+        "distance_miles": 38.31,
+        "overall_score": 0.4418,
+        "status": "open",
+        "reasoning": "Its reduced score is due to open status combined with a large distance (38.31 miles) and food category weighting."
       },
       {
         "id": "food-001",
-        "name": "USDA Food Distribution Center",
+        "name": "Newport Community Food Pantry",
         "type": "food",
-        "lat": 44.7187348,
-        "lng": -123.9032574,
-        "distance_miles": 9.46,
-        "overall_score": 1.0,
-        "status": "unknown",
-        "reasoning": "It scored 1.0 because it is a USDA food distribution center with unknown status and a moderate distance of 9.46 miles, still reflecting strong availability."
-      },
-      {
-        "id": "food-004",
-        "name": "Toledo Food Share Pantry",
-        "type": "food",
-        "lat": 44.6209885,
-        "lng": -123.9370472,
-        "distance_miles": 5.59,
-        "overall_score": 0.2553,
-        "status": "closed",
-        "reasoning": "It scored 0.2553 due to being closed and relatively close at 5.59 miles, limiting its usefulness."
+        "lat": 44.6368,
+        "lng": -124.0535,
+        "distance_miles": 38.4,
+        "overall_score": 0.2813,
+        "status": "open",
+        "reasoning": "The low score reflects being open yet distant (38.4 miles) and categorized as a food resource."
       }
     ]
   },
   "ranked_resources": [
     {
-      "id": "food-002",
-      "name": "Toledo Food Pantry - Food Distribution Center",
-      "type": "food",
-      "lat": 44.6224694,
-      "lng": -123.934616,
-      "distance_miles": 5.7,
-      "overall_score": 1.0,
-      "status": "unknown",
-      "reasoning": "It scored 1.0 as a food pantry with unknown status but a relatively close distance of 5.7 miles, indicating high accessibility."
-    },
-    {
-      "id": "food-001",
-      "name": "USDA Food Distribution Center",
-      "type": "food",
-      "lat": 44.7187348,
-      "lng": -123.9032574,
-      "distance_miles": 9.46,
-      "overall_score": 1.0,
-      "status": "unknown",
-      "reasoning": "It scored 1.0 because it is a USDA food distribution center with unknown status and a moderate distance of 9.46 miles, still reflecting strong availability."
-    },
-    {
-      "id": "463367491",
-      "name": "Samaritan Pacific Communities Hospital",
+      "id": "13152039635",
+      "name": "Student Health Services Tebeau Hall Clinic",
       "type": "hospital",
-      "lat": 44.6287918,
-      "lng": -124.0594538,
-      "distance_miles": 0.47,
-      "overall_score": 1.0,
+      "lat": 44.5627319,
+      "lng": -123.2727889,
+      "distance_miles": 0.43,
+      "overall_score": 0.9573,
       "status": "open",
-      "reasoning": "It scored 1.0 as an open hospital located just 0.47 miles away, ensuring immediate medical care."
+      "reasoning": "It scored highly because it is open, very close (0.43 miles), and classified as a hospital."
     },
     {
-      "id": "1080968252",
-      "name": "Willamette Valley Cancer Institute and Research Center",
+      "id": "126638106",
+      "name": "The Corvallis Clinic Walnut",
       "type": "hospital",
-      "lat": 44.6521253,
-      "lng": -124.0537676,
-      "distance_miles": 1.54,
-      "overall_score": 1.0,
+      "lat": 44.5932357,
+      "lng": -123.2786125,
+      "distance_miles": 1.82,
+      "overall_score": 0.9487,
       "status": "open",
-      "reasoning": "It scored 1.0 due to being an open hospital within a short distance of 1.54 miles, providing reliable health services."
+      "reasoning": "Its high score reflects being open, relatively close (1.82 miles), and a hospital facility."
     },
     {
-      "id": "549829765",
-      "name": "Siletz Community Health Clinic",
+      "id": "10783308189",
+      "name": "Corvallis Clinic Surgery Center",
       "type": "hospital",
-      "lat": 44.7212341,
-      "lng": -123.9044247,
-      "distance_miles": 9.53,
-      "overall_score": 1.0,
+      "lat": 44.6017925,
+      "lng": -123.2554625,
+      "distance_miles": 2.67,
+      "overall_score": 0.9434,
       "status": "open",
-      "reasoning": "It scored 1.0 as an open hospital, even though it is 9.53 miles distant, its operational status guarantees dependable care."
+      "reasoning": "The score is high due to its open status, moderate distance (2.67 miles), and hospital category."
     },
     {
-      "id": "6068831201",
-      "name": "Samaritan Depoe Bay Clinic",
+      "id": "11477264006",
+      "name": "Samaritan Physical Rehabilitation Specialists - Corvallis",
       "type": "hospital",
-      "lat": 44.8178984,
-      "lng": -124.0633858,
-      "distance_miles": 13.0,
-      "overall_score": 1.0,
+      "lat": 44.5723682,
+      "lng": -123.263202,
+      "distance_miles": 0.87,
+      "overall_score": 0.9066,
       "status": "open",
-      "reasoning": "It scored 1.0 for being an open clinic at 13.0 miles, maintaining availability for emergency needs."
+      "reasoning": "It earned a strong score from being open, nearby (0.87 miles), and a hospital service."
     },
     {
-      "id": "1153934493",
-      "name": "Samaritan Waldport Clinic",
+      "id": "11234899385",
+      "name": "SamCare Express",
       "type": "hospital",
-      "lat": 44.4164347,
-      "lng": -124.0760962,
-      "distance_miles": 14.81,
-      "overall_score": 1.0,
+      "lat": 44.5589843,
+      "lng": -123.2799884,
+      "distance_miles": 0.55,
+      "overall_score": 0.7646,
       "status": "open",
-      "reasoning": "It scored 1.0 as an open clinic 14.81 miles away, preserving readiness to assist."
+      "reasoning": "The moderate score results from being open and close (0.55 miles) but lower than other hospitals due to its express clinic nature."
     },
     {
-      "id": "9191852835",
-      "name": "Adventist Health Urgent Care",
+      "id": "305819282",
+      "name": "Samaritan Athletic Medicine Center",
       "type": "hospital",
-      "lat": 44.9592723,
-      "lng": -124.013516,
-      "distance_miles": 22.82,
-      "overall_score": 1.0,
+      "lat": 44.5593427,
+      "lng": -123.2842873,
+      "distance_miles": 0.58,
+      "overall_score": 0.7644,
       "status": "open",
-      "reasoning": "It scored 1.0 because it is an open urgent care facility, despite being 22.82 miles distant, its status ensures access."
+      "reasoning": "Its score is moderate because it is open, close (0.58 miles), and a specialized hospital center."
     },
     {
-      "id": "food-004",
-      "name": "Toledo Food Share Pantry",
-      "type": "food",
-      "lat": 44.6209885,
-      "lng": -123.9370472,
-      "distance_miles": 5.59,
-      "overall_score": 0.2553,
-      "status": "closed",
-      "reasoning": "It scored 0.2553 due to being closed and relatively close at 5.59 miles, limiting its usefulness."
+      "id": "2453280127",
+      "name": "Samaritan Pediatrics",
+      "type": "hospital",
+      "lat": 44.571437,
+      "lng": -123.263891,
+      "distance_miles": 0.81,
+      "overall_score": 0.763,
+      "status": "open",
+      "reasoning": "The score is moderate as it is open, relatively close (0.81 miles), and a hospital pediatric service."
     },
     {
       "id": "food-003",
-      "name": "Lincoln City Food Pantry",
+      "name": "Oregon Coast Emergency Food Bank",
       "type": "food",
-      "lat": 44.9717254,
-      "lng": -124.011925,
-      "distance_miles": 23.68,
-      "overall_score": 0.08,
-      "status": "closed",
-      "reasoning": "It scored 0.08 because it is closed and far away at 23.68 miles, severely reducing its availability."
+      "lat": 44.629,
+      "lng": -124.06,
+      "distance_miles": 38.65,
+      "overall_score": 0.48,
+      "status": "open",
+      "reasoning": "The lower score stems from being open but far away (38.65 miles) and belonging to the food category."
+    },
+    {
+      "id": "food-002",
+      "name": "Lincoln County Meal Site",
+      "type": "food",
+      "lat": 44.6412,
+      "lng": -124.051,
+      "distance_miles": 38.31,
+      "overall_score": 0.4418,
+      "status": "open",
+      "reasoning": "Its reduced score is due to open status combined with a large distance (38.31 miles) and food category weighting."
+    },
+    {
+      "id": "food-001",
+      "name": "Newport Community Food Pantry",
+      "type": "food",
+      "lat": 44.6368,
+      "lng": -124.0535,
+      "distance_miles": 38.4,
+      "overall_score": 0.2813,
+      "status": "open",
+      "reasoning": "The low score reflects being open yet distant (38.4 miles) and categorized as a food resource."
     }
   ],
-  "summary": "Open and nearby resources received perfect scores, while closed or distant facilities scored lower.",
-  "generated_at": "2026-05-03T07:03:31.265762+00:00"
+  "summary": "Resources received higher scores when they were open, nearby, and classified as hospitals, while distant food sites scored lower.",
+  "generated_at": "2026-05-03T08:03:20.872594+00:00"
 }

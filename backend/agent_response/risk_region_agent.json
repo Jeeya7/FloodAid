@@ -1,174 +1,158 @@
 {
-  "lat": 44.63,
-  "lang": -124.05,
-  "raidus": 25,
+  "lat": 44.56696701672331,
+  "lang": -123.27916814580692,
+  "raidus": 25.0,
   "regions": [
     {
-      "area_id": "14305500",
-      "name": "SILETZ RIVER AT SILETZ, OR",
+      "area_id": "14166000",
+      "name": "WILLAMETTE RIVER AT HARRISBURG, OR",
       "center": {
-        "lat": 44.7151172,
-        "lng": -123.8873348
+        "lat": 44.27040126,
+        "lng": -123.1737036
       },
       "risk_level": "low",
       "color": "green",
-      "confidence": 0.6,
+      "confidence": 0.63,
       "evidence": {
         "data_quality": {
           "usable": true,
           "missing_fields": [
-            "timestamp",
-            "observation_time"
+            "observation_time",
+            "latitude",
+            "longitude"
           ],
           "data_warnings": [
-            "Gage height and streamflow are zero while flood stage is 20 ft, suggesting possible sensor failure",
-            "Water level trend is unknown",
-            "No timestamp provided; data freshness cannot be verified"
+            "USGS sensor readings are zero for gage height, streamflow, and percentile rank, indicating possible sensor failure or stale data."
           ],
-          "confidence_modifier": 0.6
+          "confidence_modifier": 0.7
         },
         "hydrology": {
           "hydrology_risk": "low",
           "hydrology_evidence": [
-            "Gage height is 0.0 ft, which is 20.0 ft below the flood stage of 20.0 ft.",
-            "Streamflow is 0 cfs, corresponding to the 0th percentile, indicating extremely low flow.",
-            "Water level trend is unknown due to insufficient data."
+            "gage height 0.0 ft well below flood stage 20.0 ft",
+            "streamflow 0 cfs, percentile rank 0 indicating extremely low flow",
+            "water level trend unknown",
+            "data quality confidence modifier 0.7 reduces certainty"
           ],
           "trend": "unknown",
-          "reasoning_summary": "The gage height is far below flood stage and streamflow is at minimal levels, indicating low hydrologic risk despite low data confidence."
+          "reasoning_summary": "Current gage height is far below flood stage, streamflow is negligible, and percentile rank indicates extremely low flow conditions, leading to low hydrologic risk despite unknown trend and moderate data confidence."
         },
         "weather": {
           "weather_risk": "low",
           "weather_evidence": [
-            "No active flood watch or warning (weather_alert: none)",
-            "Rain forecast total: 0.0 inches",
-            "Rain expected in next 6 hours: 0.0 inches",
-            "Storm probability: 14%"
+            "No rain forecast (0.0 in)",
+            "Negligible short-term rain (0.0 in next 6 hr)",
+            "Very low storm probability (2%)",
+            "No active flood watch/warning"
           ],
           "alert_level": "none",
-          "reasoning_summary": "Given the absence of precipitation forecasts, negligible short-term rain, and low storm probability (14%), flood risk is minimal. The data quality confidence modifier of 0.6 indicates moderate confidence in the assessment."
+          "reasoning_summary": "Given the absence of forecasted rain, minimal short-term precipitation, low storm probability, and no flood alerts, the flood risk is assessed as low."
         }
       },
-      "reasoning_summary": "Hydrology shows gage height 0 ft (20 ft below flood stage) and streamflow 0 cfs, indicating minimal flow. Weather indicates no precipitation forecast, no alerts, and low storm probability. Both sources agree on low flood risk, though data quality warnings suggest possible sensor failure and unknown trends, reducing confidence.",
-      "recommended_action": "Continue to monitor the gage for sensor integrity, verify data freshness, and maintain routine preparedness; no immediate flood mitigation actions are required."
-    },
-    {
-      "area_id": "14305800",
-      "name": "SILETZ RIVER NEAR SILETZ, OR",
-      "center": {
-        "lat": 44.7646,
-        "lng": -123.9137972
-      },
-      "risk_level": "low",
-      "color": "green",
-      "confidence": 0.6,
-      "evidence": {
-        "data_quality": {
-          "usable": true,
-          "missing_fields": [
-            "timestamp"
-          ],
-          "data_warnings": [
-            "gage_height_ft is 0.0 ft while flood_stage_ft is 20.0 ft",
-            "streamflow_cfs is 0",
-            "percentile_rank is 0",
-            "water_level_trend is 'unknown'",
-            "wind speed in forecast_summary is 0 mph",
-            "rain_forecast_inches and rain_next_6hr_inches are 0.0 despite fog"
-          ],
-          "confidence_modifier": 0.6
-        },
-        "hydrology": {
-          "hydrology_risk": "low",
-          "hydrology_evidence": [
-            "gage height 0.0 ft is far below flood stage of 20.0 ft",
-            "streamflow is 0 cfs, percentile rank 0 indicating extremely low flow",
-            "water level trend is unknown"
-          ],
-          "trend": "unknown",
-          "reasoning_summary": "The gage height is significantly below flood stage and streamflow is at minimal levels, indicating low flood risk despite low data confidence."
-        },
-        "weather": {
-          "weather_risk": "low",
-          "weather_evidence": [
-            "No active flood watch/warning (weather_alert: none)",
-            "Rain forecast total 0.0 inches",
-            "Rain expected in next 6 hours 0.0 inches",
-            "Storm probability 13% (low)",
-            "Data quality confidence modifier 0.6 reduces certainty but still indicates low risk"
-          ],
-          "alert_level": "none",
-          "reasoning_summary": "Given absent precipitation forecasts, minimal storm probability, and no active alerts, flood risk is low despite moderate data confidence."
-        }
-      },
-      "reasoning_summary": "Hydrology shows gage height 0.0 ft far below flood stage 20.0 ft and zero streamflow; weather shows no precipitation forecasts, low storm probability, and no alerts. Despite data quality issues (missing timestamp, zero gage height, etc.), the combined evidence indicates low flood risk.",
+      "reasoning_summary": "Hydrology and weather assessments both indicate low flood risk: gage height is far below flood stage, streamflow is negligible, and no rain is forecast. Data quality issues reduce confidence, but the agreement between sources supports a low risk conclusion.",
       "recommended_action": "Continue routine monitoring; no immediate mitigation actions required."
     },
     {
-      "area_id": "14306032",
-      "name": "BIG ELK CREEK NEAR ELK CITY, OR",
+      "area_id": "14170000",
+      "name": "LONG TOM RIVER AT MONROE, OR",
       "center": {
-        "lat": 44.6037222,
-        "lng": -123.8520556
+        "lat": 44.3128333,
+        "lng": -123.296361
       },
       "risk_level": "low",
       "color": "green",
-      "confidence": 0.6,
+      "confidence": 0.5,
       "evidence": {
         "data_quality": {
           "usable": true,
-          "missing_fields": [
-            "timestamp"
-          ],
-          "data_warnings": [
-            "gage_height_ft is zero, possible sensor issue",
-            "streamflow_cfs is zero, possible sensor issue",
-            "percentile_rank is zero, extreme low value",
-            "water_level_trend is unknown"
-          ],
-          "confidence_modifier": 0.6
+          "missing_fields": [],
+          "data_warnings": [],
+          "confidence_modifier": 1.0
         },
         "hydrology": {
           "hydrology_risk": "low",
           "hydrology_evidence": [
             "gage height 0.0 ft is well below flood stage of 20.0 ft",
             "streamflow is 0 cfs, indicating no flow",
-            "percentile rank is 0th, indicating extremely low flow relative to historical",
-            "water level trend is unknown due to insufficient data",
-            "data quality confidence modifier is 0.6, reflecting moderate confidence"
+            "percentile rank is 0%, indicating extremely low flow relative to historical data"
           ],
           "trend": "unknown",
-          "reasoning_summary": "Gage height is far below flood stage, streamflow and percentile are at minimum, indicating negligible flood risk despite moderate data confidence."
+          "reasoning_summary": "The gage height is far below flood stage, streamflow is zero, and percentile rank is minimal, indicating negligible flood risk; however, the water level trend is unknown due to lack of trend data."
+        },
+        "weather": {
+          "weather_risk": "low",
+          "weather_evidence": [],
+          "alert_level": "none",
+          "reasoning_summary": "No active alerts, negligible rainfall forecast (0.0 in total and 0.0 in next 6 hr), and very low storm probability (2%). Conditions are mostly clear, indicating minimal flood risk."
+        }
+      },
+      "reasoning_summary": "Synthesis agent failed; risk estimated from sub-agent outputs. (Synthesis error: Expecting value: line 1 column 1 (char 0))",
+      "recommended_action": "Monitor conditions and follow local emergency guidance."
+    },
+    {
+      "area_id": "14170350",
+      "name": "MARYS RIVER ABOVE WOODS CREEK, NR PHILOMATH, OR",
+      "center": {
+        "lat": 44.5476944,
+        "lng": -123.3990278
+      },
+      "risk_level": "low",
+      "color": "green",
+      "confidence": 0.72,
+      "evidence": {
+        "data_quality": {
+          "usable": true,
+          "missing_fields": [
+            "timestamp",
+            "last_updated"
+          ],
+          "data_warnings": [
+            "gage_height_ft is 0.0 while flood_stage_ft is 20.0, suggesting possible sensor issue or missing data",
+            "streamflow_cfs is 0, indicating no flow which may be unrealistic",
+            "percentile_rank is 0, indicating lowest possible rank which may indicate stale data",
+            "water_level_trend is unknown",
+            "forecast summary indicates wind around 0 mph, which is questionable"
+          ],
+          "confidence_modifier": 0.8
+        },
+        "hydrology": {
+          "hydrology_risk": "low",
+          "hydrology_evidence": [
+            "gage height 0.0 ft is far below flood stage of 20.0 ft",
+            "streamflow is 0 cfs with percentile rank 0 indicating extremely low flow",
+            "water level trend is unknown"
+          ],
+          "trend": "unknown",
+          "reasoning_summary": "The gage height is significantly lower than the flood stage, streamflow is at zero and in the lowest percentile, indicating minimal flood risk despite unknown trend and moderate data confidence."
         },
         "weather": {
           "weather_risk": "low",
           "weather_evidence": [
-            "No active flood watch/warning (weather_alert: none)",
+            "No active flood watch/warning",
             "Rain forecast total: 0.0 inches",
-            "Rain expected in next 6 hours: 0.0 inches",
-            "Storm probability: 0.14 (14%)",
-            "Forecast summary indicates fog and mostly clear conditions"
+            "Rain forecast next 6 hours: 0.0 inches",
+            "Storm probability: 2%"
           ],
           "alert_level": "none",
-          "reasoning_summary": "Given absent precipitation forecasts, minimal storm probability, and no active alerts, flood risk is low despite moderate data confidence."
+          "reasoning_summary": "With no precipitation expected and very low storm probability, flood risk is minimal."
         }
       },
-      "reasoning_summary": "Hydrology shows gage height far below flood stage, zero streamflow, and extreme low percentile, indicating negligible flood risk. Weather forecasts show no precipitation, minimal storm probability, and no active alerts. Despite data quality issues (zero gage height and streamflow, unknown trend), the combined evidence points to low flood risk.",
-      "recommended_action": "No immediate action required; continue routine monitoring and verify sensor functionality."
+      "reasoning_summary": "Hydrology and weather assessments both indicate low flood risk: gage height is far below flood stage, streamflow is negligible, and no precipitation is expected. Despite data quality issues (missing timestamps, questionable sensor readings), the agreement between sources supports a low risk conclusion.",
+      "recommended_action": "Continue routine monitoring; no immediate flood mitigation actions required."
     }
   ],
   "environmental_risk_packets": [
     {
-      "area_id": "14305500",
-      "name": "SILETZ RIVER AT SILETZ, OR",
+      "area_id": "14166000",
+      "name": "WILLAMETTE RIVER AT HARRISBURG, OR",
       "river_name": "",
       "center": {
-        "lat": 44.7151172,
-        "lng": -123.8873348
+        "lat": 44.27040126,
+        "lng": -123.1737036
       },
       "raw_packet": {
         "usgs": {
-          "station_id": "14305500",
+          "station_id": "14166000",
           "gage_height_ft": 0.0,
           "flood_stage_ft": 20.0,
           "streamflow_cfs": 0,
@@ -179,22 +163,22 @@
           "weather_alert": "none",
           "rain_forecast_inches": 0.0,
           "rain_next_6hr_inches": 0.0,
-          "storm_probability": 0.14,
-          "forecast_summary": "Areas of fog. Partly cloudy, with a low around 50. East southeast wind around 1 mph."
+          "storm_probability": 0.02,
+          "forecast_summary": "Patchy fog after 3am. Mostly clear, with a low around 49. North northwest wind around 2 mph."
         }
       }
     },
     {
-      "area_id": "14305800",
-      "name": "SILETZ RIVER NEAR SILETZ, OR",
+      "area_id": "14170000",
+      "name": "LONG TOM RIVER AT MONROE, OR",
       "river_name": "",
       "center": {
-        "lat": 44.7646,
-        "lng": -123.9137972
+        "lat": 44.3128333,
+        "lng": -123.296361
       },
       "raw_packet": {
         "usgs": {
-          "station_id": "14305800",
+          "station_id": "14170000",
           "gage_height_ft": 0.0,
           "flood_stage_ft": 20.0,
           "streamflow_cfs": 0,
@@ -205,22 +189,22 @@
           "weather_alert": "none",
           "rain_forecast_inches": 0.0,
           "rain_next_6hr_inches": 0.0,
-          "storm_probability": 0.13,
-          "forecast_summary": "Areas of fog. Partly cloudy, with a low around 50. Wind around 0 mph."
+          "storm_probability": 0.02,
+          "forecast_summary": "Mostly clear, with a low around 51. Northwest wind around 2 mph."
         }
       }
     },
     {
-      "area_id": "14306032",
-      "name": "BIG ELK CREEK NEAR ELK CITY, OR",
+      "area_id": "14170350",
+      "name": "MARYS RIVER ABOVE WOODS CREEK, NR PHILOMATH, OR",
       "river_name": "",
       "center": {
-        "lat": 44.6037222,
-        "lng": -123.8520556
+        "lat": 44.5476944,
+        "lng": -123.3990278
       },
       "raw_packet": {
         "usgs": {
-          "station_id": "14306032",
+          "station_id": "14170350",
           "gage_height_ft": 0.0,
           "flood_stage_ft": 20.0,
           "streamflow_cfs": 0,
@@ -231,12 +215,12 @@
           "weather_alert": "none",
           "rain_forecast_inches": 0.0,
           "rain_next_6hr_inches": 0.0,
-          "storm_probability": 0.14,
-          "forecast_summary": "Areas of fog before 4am. Mostly clear, with a low around 50. East wind around 2 mph."
+          "storm_probability": 0.02,
+          "forecast_summary": "Mostly clear, with a low around 52. Wind around 0 mph."
         }
       }
     }
   ],
-  "summary": "Flood risk remains low across the Siletz River and Big Elk Creek areas",
-  "generated_at": "2026-05-03T07:01:53.781470+00:00"
+  "summary": "We need to produce a single short sentence summarizing overall flood situation across listed regions. Calm and factual. No quotes, no markdown. Just plain sentence.\n\nRegions: Willamette River at Harrisburg, OR low; Long Tom River at Monroe, OR low; Marys River above Woods Creek, near Philomath, OR low. So overall: Flood risk remains low across these Oregon",
+  "generated_at": "2026-05-03T07:59:16.596539+00:00"
 }
