@@ -13,6 +13,7 @@
 import json
 import math
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
 from concurrent.futures import ThreadPoolExecutor
 
@@ -29,6 +30,9 @@ TOP_N         = 3
 
 _WEIGHTS              = {"safety": 0.4, "availability": 0.4, "distance": 0.2}
 _CATEGORY_MULTIPLIER  = {"hospital": 1.2, "shelter": 1.1, "food": 1.0}
+
+BASE_DIR = Path(__file__).resolve().parent
+AGENT_RESPONSE_PATH = BASE_DIR.parent / "agent_response" / "emergency_resource_agent.json"
 
 _cache: dict[str, Any] = {}
 
@@ -259,22 +263,36 @@ def response_formatter_step(
     }
 
 
+def _save_agent_response(payload: dict[str, Any]) -> None:
+    try:
+        AGENT_RESPONSE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with AGENT_RESPONSE_PATH.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+    except OSError:
+        pass
+
+
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def emergency_resource_agent(lat: float, lng: float) -> dict[str, Any]:
     key = f"{round(lat, 2)},{round(lng, 2)}"
     if key in _cache:
-        return _cache[key]
+        result = _cache[key]
+        _save_agent_response(result)
+        return result
 
     resources = resource_collection_step(lat, lng)
 
     if not resources:
-        return {
+        result = {
             "recommended_resources": {"hospital": [], "shelter": [], "food": []},
             "ranked_resources":      [],
             "summary":               "No emergency resources found near this location.",
             "generated_at":          datetime.now(timezone.utc).isoformat(),
         }
+        _save_agent_response(result)
+        _cache[key] = result
+        return result
 
     # Phase 2: LLM analysis and distance math run in parallel
     with ThreadPoolExecutor(max_workers=2) as ex:
@@ -300,5 +318,6 @@ def emergency_resource_agent(lat: float, lng: float) -> dict[str, Any]:
         summary          = summary,
     )
 
+    _save_agent_response(result)
     _cache[key] = result
     return result
