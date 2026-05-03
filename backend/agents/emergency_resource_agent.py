@@ -17,6 +17,8 @@ import json
 import math
 from datetime import datetime, timezone
 from typing import Any
+from concurrent.futures import ThreadPoolExecutor
+
 
 from openrouter_client import chat, parse_json_response
 from tools.resource_tools import (
@@ -94,9 +96,25 @@ def resource_collection_step(
     bounds = create_bounds_tool.invoke({"lat": lat, "lng": lng})
     
     # TODO: Change this
-    food_result     = get_food_resources_tool.invoke({"lat": lat, "lng": lng, "radius_miles": radius_miles})
-    hospital_result = get_hospitals_tool.invoke({"lat": lat, "lng": lng, "radius_miles": radius_miles})
-    shelter_result  = get_shelters_tool.invoke({"lat": lat, "lng": lng, "radius_miles": radius_miles})
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        food_future = executor.submit(
+            get_food_resources_tool.invoke,
+            {"lat": lat, "lng": lng, "radius_miles": radius_miles},
+        )
+
+        hospital_future = executor.submit(
+            get_hospitals_tool.invoke,
+            {"lat": lat, "lng": lng, "radius_miles": radius_miles},
+        )
+
+        shelter_future = executor.submit(
+            get_shelters_tool.invoke,
+            {"lat": lat, "lng": lng, "radius_miles": radius_miles},
+        )
+
+        food_result = food_future.result()
+        hospital_result = hospital_future.result()
+        shelter_result = shelter_future.result()
 
     flat: list[dict[str, Any]] = []
 
