@@ -84,14 +84,14 @@ def _fallback_synthesis(resources: list[dict]) -> dict[str, Any]:
 def resource_collection_step(
     lat: float,
     lng: float,
-    radius_miles: float,
+    radius_miles: float = 25,
 ) -> list[dict[str, Any]]:
     """
     Call the three resource tools and flatten all results into a single list.
     Each resource gets a 'category' field ('food', 'hospital', or 'shelter')
     so downstream steps can see what kind of resource it is.
     """
-    bounds = create_bounds_tool.invoke(lat, lng)
+    bounds = create_bounds_tool.invoke({"lat": lat, "lng": lng})
     
     # TODO: Change this
     food_result     = get_food_resources_tool.invoke({"lat": lat, "lng": lng, "radius_miles": radius_miles})
@@ -249,9 +249,11 @@ def resource_synthesis_agent(
 
     system = (
         "You are a flood emergency resource coordinator. "
-        "Each resource has safety, availability, and distance scores (all 0–1, higher is better). "
-        "Combine them into an overall_score. Pick the single best option for someone needing help now. "
-        "Heavily penalise closed resources. Prefer the closest open, safe resource. "
+        "Each resource has safety, availability, and distance scores. "
+        "Rank all resources, but the final system needs the best option from EACH category: "
+        "hospital, shelter, and food. "
+        "Do not allow hospitals to replace food or shelter resources. "
+        "Heavily penalise closed resources. "
         "Return ONLY valid JSON — no markdown:\n"
         '{"ranked_resources":[{"id":"string","overall_score":0.0,"recommended":false,"reasoning":"string"}],'
         '"best_option_id":"string","summary":"string"}'
@@ -260,11 +262,10 @@ def resource_synthesis_agent(
 
     try:
         raw = chat(system, user)
+        print("\n=== SYNTHESIS RAW ===\n", raw)   # 👈 ADD THIS
         return parse_json_response(raw)
     except Exception as exc:
-        result = _fallback_synthesis(resources)
-        result["error"] = str(exc)
-        return result
+        print("\n=== SYNTHESIS ERROR ===\n", str(exc))  # 👈 ADD THIS
 
 
 # ── Step 6 — response_formatter_step (Python) ────────────────────────────────
@@ -276,48 +277,52 @@ def response_formatter_step(
     synthesis: dict[str, Any],
 ) -> dict[str, Any]:
     """
-    Merge all step outputs into the final frontend-ready JSON.
-    Pure Python — no LLM call.
+    Merge all step outputs into frontend-ready JSON.
+    Returns top resource per category: hospital, shelter, food.
     """
     resource_lookup = {r["id"]: r for r in resources}
     ranked_raw: list[dict] = synthesis.get("ranked_resources", [])
-    best_id: str = synthesis.get("best_option_id", "")
 
     ranked_resources = []
+
     for item in ranked_raw:
         rid = item["id"]
         base = resource_lookup.get(rid, {})
+
         ranked_resources.append({
-            "id":            rid,
-            "name":          base.get("name", "Unknown"),
-            "type":          base.get("category", "unknown"),
+            "id": rid,
+            "name": base.get("name", "Unknown"),
+            "type": base.get("category", "unknown"),
+            "lat": base.get("lat", 0),
+            "lng": base.get("lng", 0),
             "distance_miles": base.get("distance_miles", 0),
             "overall_score": item.get("overall_score", 0),
-            "status":        availability_map.get(rid, {}).get("status", base.get("status", "unknown")),
+            "status": availability_map.get(rid, {}).get(
+                "status",
+                base.get("status", "unknown"),
+            ),
+            "reasoning": item.get("reasoning", ""),
         })
 
-    # Sort by overall_score descending so the frontend can use the list directly
     ranked_resources.sort(key=lambda x: x["overall_score"], reverse=True)
 
-    # Build the recommended resource block
-    best_base = resource_lookup.get(best_id, {})
-    best_synthesis = next((r for r in ranked_raw if r["id"] == best_id), {})
-    recommended_resource = {
-        "id":             best_id,
-        "name":           best_base.get("name", "Unknown"),
-        "type":           best_base.get("category", "unknown"),
-        "lat":            best_base.get("lat", 0),
-        "lng":            best_base.get("lng", 0),
-        "distance_miles": best_base.get("distance_miles", 0),
-        "status":         availability_map.get(best_id, {}).get("status", best_base.get("status", "unknown")),
-        "reasoning":      best_synthesis.get("reasoning", synthesis.get("summary", "")),
-    }
+    top_by_category = {}
+
+    for resource in ranked_resources:
+        category = resource["type"]
+
+        if category not in top_by_category:
+            top_by_category[category] = resource
 
     return {
-        "recommended_resource": recommended_resource,
-        "ranked_resources":     ranked_resources,
-        "summary":              synthesis.get("summary", ""),
-        "generated_at":         datetime.now(timezone.utc).isoformat(),
+        "recommended_resources": {
+            "hospital": top_by_category.get("hospital"),
+            "shelter": top_by_category.get("shelter"),
+            "food": top_by_category.get("food"),
+        },
+        "ranked_resources": ranked_resources,
+        "summary": synthesis.get("summary", ""),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
     }
 
 

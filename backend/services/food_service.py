@@ -1,27 +1,29 @@
 # food_service.py
-# Fetches food-assistance resources near a location.
-# In production, replace the placeholder URL with a real API such as:
-#   - Food Pantries API  (https://www.foodpantries.org)
-#   - USDA SNAP retailer locator
-#   - 211 API            (https://api.211.org)
+# Fetches food-assistance resources near a location using Google Places.
+# Falls back to labelled mock data if API fails or returns no usable results.
 
+import math
+import os
 from typing import Any
+
+from dotenv import load_dotenv
 
 try:
     import requests
+
     _REQUESTS_AVAILABLE = True
 except ImportError:
     _REQUESTS_AVAILABLE = False
 
-# TODO: Replace with the real food-resource API endpoint when available
-FOOD_API_URL = "https://xyz.example.com/food"
 
-_TIMEOUT = 10  # seconds
+load_dotenv()
 
+GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY")
 
-# ── Mock data ─────────────────────────────────────────────────────────────────
-# Returned when the real API is unreachable.
-# Source is clearly labelled "mock_food_api" so callers know it is not live data.
+GOOGLE_PLACES_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+
+_TIMEOUT = 10
+
 
 _MOCK_FOOD_RESOURCES = [
     {
@@ -33,8 +35,9 @@ _MOCK_FOOD_RESOURCES = [
         "address": "432 NW Coast St, Newport, OR 97365",
         "distance_miles": 0.4,
         "status": "open",
+        "opening_hours": {"open_now": True},
         "phone": "541-555-0101",
-        "notes": "Open Mon–Fri 9am–5pm. Emergency distributions available during flood events.",
+        "notes": "Mock data. Open Mon–Fri 9am–5pm.",
     },
     {
         "id": "food-002",
@@ -45,8 +48,9 @@ _MOCK_FOOD_RESOURCES = [
         "address": "118 SE Benton St, Newport, OR 97365",
         "distance_miles": 0.7,
         "status": "open",
+        "opening_hours": {"open_now": True},
         "phone": "541-555-0202",
-        "notes": "Hot meals served daily. Disaster relief supplies available on request.",
+        "notes": "Mock data. Hot meals served daily.",
     },
     {
         "id": "food-003",
@@ -57,73 +61,223 @@ _MOCK_FOOD_RESOURCES = [
         "address": "750 SW Coos Ave, Newport, OR 97365",
         "distance_miles": 1.2,
         "status": "open",
+        "opening_hours": {"open_now": True},
         "phone": "541-555-0303",
-        "notes": "Regional food bank. Drive-through distribution during emergencies.",
+        "notes": "Mock data. Emergency food distribution site.",
     },
 ]
 
 
-# ── Normalizer ────────────────────────────────────────────────────────────────
+def _distance_miles(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """Calculate distance between two lat/lng points in miles."""
+    radius_earth_miles = 3958.8
 
-def _normalize_resource(raw: dict[str, Any]) -> dict[str, Any]:
-    """Map one raw API item to the standard food resource schema."""
-    valid_types = {"food_bank", "meal_site", "pantry"}
-    raw_type = str(raw.get("type", "")).lower().replace(" ", "_")
+    dlat = math.radians(lat2 - lat1)
+    dlng = math.radians(lng2 - lng1)
+
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(dlng / 2) ** 2
+    )
+
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+    return radius_earth_miles * c
+
+
+def _extract_status(place: dict[str, Any]) -> tuple[str, dict[str, Any]]:
+    """Extract open/closed/unknown status from Google Places opening_hours."""
+
+    opening_hours = place.get("opening_hours", {})
+    open_now = opening_hours.get("open_now")
+
+    if open_now is True:
+        status = "open"
+    elif open_now is False:
+        status = "closed"
+    else:
+        status = "unknown"
+
+    return status, {"open_now": open_now}
+
+
+def _infer_resource_type(name: str) -> str:
+    """Infer resource type from place name."""
+
+    lowered = name.lower()
+
+    if "food bank" in lowered:
+        return "food_bank"
+
+    if "meal" in lowered:
+        return "meal_site"
+
+    if "pantry" in lowered:
+        return "pantry"
+
+    if "food share" in lowered or "food distribution" in lowered:
+        return "pantry"
+
+    if "basic needs" in lowered:
+        return "pantry"
+
+    return "unknown"
+
+
+def _is_food_assistance_place(place: dict[str, Any]) -> bool:
+    """
+    Keep real emergency food resources.
+    Remove grocery stores, gas stations, restaurants, and random food businesses.
+    """
+
+    name = place.get("name", "").lower()
+    types = place.get("types", [])
+
+    strong_keywords = [
+        "food bank",
+        "food pantry",
+        "food share",
+        "food distribution",
+        "meal site",
+        "basic needs",
+    ]
+
+    reject_types = {
+        "grocery_or_supermarket",
+        "convenience_store",
+        "gas_station",
+        "liquor_store",
+        "bakery",
+        "cafe",
+        "restaurant",
+    }
+
+    if any(keyword in name for keyword in strong_keywords):
+        return True
+
+    if any(place_type in reject_types for place_type in types):
+        return False
+
+    return False
+
+
+def _normalize_google_place(
+    place: dict[str, Any],
+    index: int,
+    user_lat: float,
+    user_lng: float,
+) -> dict[str, Any]:
+    """Convert one Google Places result into your frontend-ready schema."""
+
+    location = place.get("geometry", {}).get("location", {})
+
+    place_lat = float(location.get("lat", 0.0))
+    place_lng = float(location.get("lng", 0.0))
+
+    name = place.get("name", "Unknown Food Resource")
+    status, opening_hours = _extract_status(place)
 
     return {
-        "id":             str(raw.get("id", "unknown")),
-        "name":           str(raw.get("name", "Unknown Food Resource")),
-        "type":           raw_type if raw_type in valid_types else "unknown",
-        "lat":            float(raw.get("lat", 0.0)),
-        "lng":            float(raw.get("lng", 0.0)),
-        "address":        str(raw.get("address", "")),
-        "distance_miles": float(raw.get("distance_miles", 0.0)),
-        "status":         raw.get("status") if raw.get("status") in ("open", "closed") else "unknown",
-        "phone":          str(raw.get("phone", "")),
-        "notes":          str(raw.get("notes", "")),
+        "id": f"food-{index:03}",
+        "place_id": place.get("place_id", ""),
+        "name": name,
+        "type": _infer_resource_type(name),
+        "lat": place_lat,
+        "lng": place_lng,
+        "address": place.get("vicinity", ""),
+        "distance_miles": round(
+            _distance_miles(user_lat, user_lng, place_lat, place_lng),
+            2,
+        ),
+        "status": status,
+        "opening_hours": opening_hours,
+        "phone": place.get("international_phone_number", ""),
+        "rating": place.get("rating"),
+        "user_ratings_total": place.get("user_ratings_total"),
+        "business_status": place.get("business_status", "UNKNOWN"),
+        "notes": "Google Places food assistance result.",
     }
 
 
-# ── Public function ───────────────────────────────────────────────────────────
+def _mock_response(reason: str) -> dict[str, Any]:
+    """Return clearly labelled mock data."""
+
+    return {
+        "source": "mock_food_api",
+        "using_mock_data": True,
+        "resources": _MOCK_FOOD_RESOURCES,
+        "error": reason,
+    }
+
 
 def get_food_resources(
     lat: float,
     lng: float,
-    radius_miles: float = 10,
+    radius_miles: float = 25,
 ) -> dict[str, Any]:
     """
-    Return food-assistance resources near the given coordinates.
+    Return nearby food-assistance resources.
 
-    In production this calls:
-      GET FOOD_API_URL?lat=<lat>&lng=<lng>&radius=<radius_miles>
-
-    Falls back to mock data if the request fails or requests is unavailable.
+    Uses Google Places when usable results exist.
+    Falls back to mock data when:
+    - requests is unavailable
+    - GOOGLE_PLACES_API_KEY is missing
+    - Google API errors
+    - Google returns no valid food assistance resources
     """
+
     if not _REQUESTS_AVAILABLE:
-        return {
-            "source": "mock_food_api",
-            "resources": _MOCK_FOOD_RESOURCES,
-            "error": "requests library not installed; using mock data.",
-        }
+        return _mock_response("requests library not installed")
+
+    if not GOOGLE_PLACES_API_KEY:
+        return _mock_response("GOOGLE_PLACES_API_KEY missing from .env")
 
     try:
+        radius_meters = int(min(radius_miles, 25) * 1609.34)
+
+        params = {
+            "location": f"{lat},{lng}",
+            "radius": radius_meters,
+            "keyword": "food bank OR food pantry OR food share OR food distribution",
+            "key": GOOGLE_PLACES_API_KEY,
+        }
+
         response = requests.get(
-            FOOD_API_URL,
-            params={"lat": lat, "lng": lng, "radius": radius_miles},
+            GOOGLE_PLACES_URL,
+            params=params,
             timeout=_TIMEOUT,
         )
         response.raise_for_status()
-        # TODO: Adjust the key below to match the real API's response envelope
-        raw_list: list[dict] = response.json().get("resources", response.json())
+
+        data = response.json()
+
+        if data.get("status") not in {"OK", "ZERO_RESULTS"}:
+            return _mock_response(f"Google Places error: {data.get('status')}")
+
+        raw_places = data.get("results", [])
+
+        filtered_places = [
+            place for place in raw_places if _is_food_assistance_place(place)
+        ]
+
+        if not filtered_places:
+            return _mock_response("Google Places returned no food assistance resources")
+
+        resources = [
+            _normalize_google_place(place, index, lat, lng)
+            for index, place in enumerate(filtered_places, start=1)
+        ]
+
+        resources.sort(key=lambda item: item["distance_miles"])
+
         return {
-            "source": "food_api",
-            "resources": [_normalize_resource(r) for r in raw_list],
+            "source": "google_places",
+            "using_mock_data": False,
+            "resources": resources,
+            "error": None,
         }
 
     except Exception as exc:
-        # Placeholder endpoint is not live yet — return labelled mock data
-        return {
-            "source": "mock_food_api",
-            "resources": _MOCK_FOOD_RESOURCES,
-            "error": str(exc),
-        }
+        return _mock_response(str(exc))

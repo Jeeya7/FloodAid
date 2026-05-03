@@ -16,6 +16,7 @@
 import json
 from datetime import datetime, timezone
 from typing import Any
+from concurrent.futures import ThreadPoolExecutor
 
 from openrouter_client import chat, parse_json_response
 from tools.risk_region_tools import (
@@ -249,11 +250,27 @@ def risk_region_agent(lat: float, lng: float, radius_miles: float = 25) -> dict[
 
     for gauge in gauges:
         sid = gauge["site_id"]
-        raw_packet = {
-            "usgs":           get_usgs_water_data_tool.invoke({"station_id": sid}),
-            "water_services": get_streamflow_context_tool.invoke({"station_id": sid}),
-            "weather":        get_weather_context_tool.invoke({"lat": gauge["lat"], "lng": gauge["lng"]}),
-        }
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            usgs_future = executor.submit(
+                get_usgs_water_data_tool.invoke,
+                {"station_id": sid},
+            )
+
+            water_services_future = executor.submit(
+                get_streamflow_context_tool.invoke,
+                {"station_id": sid},
+            )
+
+            weather_future = executor.submit(
+                get_weather_context_tool.invoke,
+                {"lat": gauge["lat"], "lng": gauge["lng"]},
+            )
+
+            raw_packet = {
+                "usgs": usgs_future.result(),
+                "water_services": water_services_future.result(),
+                "weather": weather_future.result(),
+            }
 
         # Store the full packet for transparency
         environmental_risk_packets.append({
