@@ -247,7 +247,6 @@ def risk_region_agent(lat: float, lng: float, radius_miles: float = 25) -> dict[
     environmental_risk_packets: list[dict] = []
     regions: list[dict] = []
 
-    print(f"GAUGE: {gauges}")
     for gauge in gauges:
         sid = gauge["site_id"]
         raw_packet = {
