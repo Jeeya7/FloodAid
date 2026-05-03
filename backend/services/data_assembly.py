@@ -1,7 +1,7 @@
 from typing import Any
 from geocoding import get_location
-from weather import get_hourly_rainfall, get_weather_alert
-from usgs import get_usgs_streamflow
+from weather_service import get_hourly_rainfall, get_weather_alert
+from usgs_service import get_usgs_streamflow, get_all_usgs_stations, USGSStationIndex
 from mock_data_service import get_mock_location
 
 
@@ -22,25 +22,41 @@ def get_environmental_data(lat: float, lng: float, usgs_site_id: str) -> dict[st
 
 
 def main():
-    print("\n🌊 FLOOD SYSTEM PIPELINE TEST\n")
+    print("\n🌊 FLOOD RISK SYSTEM START\n")
 
-    # -----------------------------
-    # 1. Get location (mock or real later)
-    # -----------------------------
-    location = get_mock_location()
-    lat = location["lat"]
-    lng = location["lng"]
+    # -------------------------------------------------
+    # Step 1: Load real USGS station network
+    # -------------------------------------------------
+    print("📡 Loading USGS station network...")
+    stations = get_all_usgs_stations()
 
-    print("📍 Location:")
-    print(location)
+    print(f"✅ Loaded {len(stations)} stations")
 
-    # -----------------------------
-    # 2. In a real system, you'd resolve this dynamically:
-    #    lat/lng → nearest USGS gauge
-    # -----------------------------
-    usgs_site_id = "14171000"  # placeholder USGS station near Corvallis area
+    # -------------------------------------------------
+    # Step 2: Build spatial index
+    # -------------------------------------------------
+    print("🧭 Building spatial index...")
+    index = USGSStationIndex(stations)
 
-    print("\n🧭 Using USGS Station ID:", usgs_site_id)
+    # -------------------------------------------------
+    # Step 3: Define user location (replace mock_location)
+    # -------------------------------------------------
+    lat = 44.5646
+    lng = -123.2620
+
+    print("\n📍 User location:")
+    print(lat, lng)
+
+    # -------------------------------------------------
+    # Step 4: Find nearest USGS gauge
+    # -------------------------------------------------
+    nearest = index.nearest(lat, lng)
+
+    print("\n🌊 Nearest USGS gauge:")
+    print(nearest)
+
+    usgs_site_id = nearest[0]["site_id"]
+
 
     # -----------------------------
     # 3. Call your REAL environmental pipeline function
@@ -70,3 +86,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+

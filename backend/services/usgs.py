@@ -4,37 +4,63 @@ import numpy as np
 from sklearn.neighbors import BallTree
 
 
-USGS_SITE_URL = "https://waterservices.usgs.gov/nwis/site/"
+
+USGS_SITE_URL = "https://waterservices.usgs.gov/nwis/iv"
 
 
-def fetch_all_usgs_stations() -> List[dict[str, Any]]:
-    params = {
-        "format": "rdb",
-        "siteStatus": "active",
-        "hasDataTypeCd": "iv"  # instantaneous values (real-time gauges)
-    }
-
-    r = requests.get(USGS_SITE_URL, params=params, timeout=30)
-    r.raise_for_status()
-
-    lines = r.text.splitlines()
+def get_all_usgs_stations() -> list[dict[str, Any]]:
+    """
+    USGS station ingestion with deduplication.
+    Returns all active USGS gauges with coordinates.
+    """
 
     stations = []
+    seen = set()
 
-    for line in lines:
-        if line.startswith("USGS"):
-            parts = line.split("\t")
+    start_index = 0
+    params = {
+        "format": "json",
+        "siteStatus": "all",          # stream sites (important for flood modeling)
+        "stateCd" : "or",
+    }
 
-            try:
-                stations.append({
-                    "site_id": parts[1],
-                    "name": parts[2],
-                    "lat": float(parts[4]),
-                    "lng": float(parts[5]),
-                    "state": parts[17],
-                })
-            except Exception:
+    r = requests.get(USGS_SITE_URL, params=params, timeout=60)
+    print("here")
+
+    data = r.json()
+
+    time_series = data.get("value", {}).get("timeSeries", [])
+
+    for item in time_series:
+        try:
+            src = item["sourceInfo"]
+
+            site_id = src["siteCode"][0]["value"]
+
+            if site_id in seen:
                 continue
+            seen.add(site_id)
+
+            geo = src.get("geoLocation", {}) \
+                        .get("geogLocation", {})
+
+            lat = geo.get("latitude")
+            lng = geo.get("longitude")
+
+            if lat is None or lng is None:
+                continue
+
+            stations.append({
+                "site_id": site_id,
+                "name": src.get("siteName"),
+                "lat": float(lat),
+                "lng": float(lng),
+                "state": src.get("siteProperty", [])
+            })
+
+        except Exception:
+            continue
+
 
     return stations
 
