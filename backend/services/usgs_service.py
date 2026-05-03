@@ -5,8 +5,6 @@
 
 from typing import Any
 import requests
-import numpy as np
-from sklearn.neighbors import BallTree
 
 # Default bounds covering the contiguous United States
 DEFAULT_BOUNDS: dict[str, float] = {
@@ -17,110 +15,6 @@ DEFAULT_BOUNDS: dict[str, float] = {
 }
 
 USGS_SITE_URL = "https://waterservices.usgs.gov/nwis/iv"
-
-
-# def get_all_usgs_stations(bounds: dict[str, float]) -> list[dict[str, Any]]:
-#     """
-#     USGS station ingestion with bounding-box filtering + deduplication.
-
-#     Returns all active USGS gauges inside the bounding box.
-
-#     USGS bBox order:
-#         west,south,east,north
-#     """
-
-#     stations = []
-#     seen = set()
-
-#     bbox = f'{bounds["west"]},{bounds["south"]},{bounds["east"]},{bounds["north"]}'
-
-#     params = {
-#         "format": "json",
-#         "siteStatus": "active",
-#         "bBox": bbox,
-#     }
-
-#     r = requests.get(USGS_SITE_URL, params=params, timeout=60)
-
-#     r.raise_for_status()
-
-#     data = r.json()
-
-#     time_series = data.get("value", {}).get("timeSeries", [])
-
-#     for item in time_series:
-#         try:
-#             src = item["sourceInfo"]
-
-#             site_id = src["siteCode"][0]["value"]
-
-#             if site_id in seen:
-#                 continue
-
-#             seen.add(site_id)
-
-#             geo = src.get("geoLocation", {}).get("geogLocation", {})
-
-#             lat = geo.get("latitude")
-#             lng = geo.get("longitude")
-
-#             if lat is None or lng is None:
-#                 continue
-
-#             stations.append({
-#                 "site_id": site_id,
-#                 "name": src.get("siteName"),
-#                 "lat": float(lat),
-#                 "lng": float(lng),
-#                 "state": src.get("siteProperty", [])
-#             })
-
-#         except Exception as e:
-#             print(f"Skipping malformed station: {e}")
-#             continue
-
-#     return stations
-
-
-# # Mock gauge locations spread across the U.S.
-# _MOCK_GAUGES = [
-#     {
-#         "station_id": "06893000",
-#         "name": "Missouri River at Kansas City, MO",
-#         "lat": 39.1131,
-#         "lng": -94.6275,
-#         "river_name": "Missouri River",
-#     },
-#     {
-#         "station_id": "07032000",
-#         "name": "Mississippi River at Memphis, TN",
-#         "lat": 35.1495,
-#         "lng": -90.0490,
-#         "river_name": "Mississippi River",
-#     },
-#     {
-#         "station_id": "11447650",
-#         "name": "Sacramento River at Sacramento, CA",
-#         "lat": 38.5816,
-#         "lng": -121.4944,
-#         "river_name": "Sacramento River",
-#     },
-#     {
-#         "station_id": "03253500",
-#         "name": "Ohio River at Cincinnati, OH",
-#         "lat": 39.1031,
-#         "lng": -84.5120,
-#         "river_name": "Ohio River",
-#     },
-#     {
-#         "station_id": "09380000",
-#         "name": "Colorado River near Grand Canyon, AZ",
-#         "lat": 36.0544,
-#         "lng": -111.9873,
-#         "river_name": "Colorado River",
-#     },
-# ]
-
 
 def get_usgs_iv_data(station_id: str) -> dict[str, Any]:
     """
@@ -192,23 +86,6 @@ def get_usgs_dv_data(station_id: str, period: str = "P10Y") -> list[float]:
                 continue
 
     return values
-
-import numpy as np
-
-
-def compute_percentile(current_value: float, history: list[float]) -> float:
-    """
-    Returns percentile rank (0-100)
-    """
-
-    if not history:
-        return 50.0
-
-    return float(np.percentile(
-        [v <= current_value for v in history],
-        100
-    ))
-
 
 def compute_trend(values: list[float]) -> str:
     """
@@ -291,39 +168,6 @@ def get_noaa_alert(lat: float, lng: float) -> str:
     return features[0]["properties"]["event"].lower()
 
 
-def get_environmental_data(lat: float, lng: float, station_id: str) -> dict[str, Any]:
-    """
-    Unified hydrology + weather state for agent system
-    """
-
-    print("GET ENVINRONMENTAL DATA CALLED")
-
-    iv = get_usgs_iv_data(station_id)
-    dv = get_usgs_dv_data(station_id)
-
-    rainfall = get_noaa_rainfall_inches(lat, lng)
-    alert = get_noaa_alert(lat, lng)
-
-    percentile = compute_percentile(iv.get("streamflow_cfs", 0), dv)
-    trend = compute_trend(dv[-5:] if len(dv) > 5 else dv)
-
-    return {
-        "rain_forecast_inches": rainfall,
-        "water_level_status": (
-            "high" if iv.get("gage_height_ft", 0) > 20 else "normal"
-        ),
-        "streamflow_status": (
-            "above_normal" if percentile > 70 else "normal"
-        ),
-        "weather_alert": alert,
-        "nearest_gauge_distance_miles": None,  # plug spatial model later
-        "water_level_trend": trend,
-        "streamflow_cfs": iv.get("streamflow_cfs"),
-        "gage_height_ft": iv.get("gage_height_ft"),
-        "percentile_rank": percentile,
-    }
-
-
 def lookup_flood_stage(station_id: str) -> float | None:
     """
     Placeholder for flood stage metadata.
@@ -344,58 +188,6 @@ def lookup_flood_stage(station_id: str) -> float | None:
     }
 
     return FLOOD_STAGE_DB.get(station_id)
-
-
-def get_water_station_state(station_id: str) -> dict[str, Any]:
-    """
-    Replaces _MOCK_WATER_DATA with real USGS-derived values.
-
-    Output format matches your mock exactly:
-    - gage_height_ft
-    - flood_stage_ft (needs lookup or dataset)
-    - streamflow_cfs
-    - percentile_rank
-    - water_level_trend
-    """
-
-    # -----------------------------
-    # 1. Real-time data (USGS IV)
-    # -----------------------------
-    iv = get_usgs_iv_data(station_id)
-
-    gage_height = iv.get("gage_height_ft", 0.0)
-    streamflow = iv.get("streamflow_cfs", 0.0)
-
-    # -----------------------------
-    # 2. Historical data (USGS DV)
-    # -----------------------------
-    history = get_usgs_dv_data(station_id)
-
-    percentile_rank = compute_percentile(streamflow, history)
-    trend = compute_trend(history[-10:] if len(history) > 10 else history)
-
-    # -----------------------------
-    # 3. Flood stage (NOT in USGS IV reliably)
-    #    You must supply or approximate this
-    # -----------------------------
-    flood_stage_ft = lookup_flood_stage(station_id)
-
-    # fallback if unknown
-    if flood_stage_ft is None:
-        flood_stage_ft = gage_height * 1.1  # weak heuristic fallback
-
-    # -----------------------------
-    # 4. Final standardized object
-    # -----------------------------
-    return {
-        "station_id": station_id,
-        "gage_height_ft": round(gage_height, 2),
-        "flood_stage_ft": round(flood_stage_ft, 2),
-        "streamflow_cfs": int(streamflow),
-        "percentile_rank": float(percentile_rank),
-        "water_level_trend": trend,
-    }
-
 
 # Mock water-level readings per station.
 # Each entry is shaped like a real USGS instantaneous values response.
@@ -542,32 +334,6 @@ def get_usgs_water_data(station_id: str) -> dict[str, Any]:
             "water_level_trend": "unknown",
         },
     )
-
-
-
-class USGSStationIndex:
-    def __init__(self, stations: list[dict]):
-        self.stations = stations
-
-        coords = np.array([
-            [s["lat"], s["lng"]] for s in stations
-        ])
-
-        # convert degrees → radians for haversine
-        self.tree = BallTree(np.radians(coords), metric="haversine")
-
-    def nearest(self, lat: float, lng: float, k: int = 3):
-        dist, idx = self.tree.query(
-            np.radians([[lat, lng]]),
-            k=k
-        )
-
-        results = []
-        for i in idx[0]:
-            results.append(self.stations[i])
-
-        return results
-    
 
 def get_usgs_streamflow(site_id: str) -> dict[str, Any]:
     url = "https://waterservices.usgs.gov/nwis/iv/"
