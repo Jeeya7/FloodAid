@@ -32,6 +32,7 @@ def chat(
         "model": MODEL,
         "temperature": temperature,
         "max_tokens": max_tokens,
+        "reasoning": {"effort": "none"},
         "messages": [
             {"role": "system", "content": system},
             {"role": "user",   "content": user},
