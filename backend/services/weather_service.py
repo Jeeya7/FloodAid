@@ -6,6 +6,7 @@
 import urllib.request
 import json
 from typing import Any
+import requests
 
 NWS_BASE = "https://api.weather.gov"
 

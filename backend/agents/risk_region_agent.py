@@ -177,7 +177,7 @@ def risk_synthesis_agent(
         '"reasoning_summary":"string","recommended_action":"string"}'
     )
     user = (
-        f"Location: {gauge['name']} ({gauge['river_name']})\n"
+        f"Location: {gauge['name']} \n"
         f"Data quality: {json.dumps(quality, separators=(',', ':'))}\n"
         f"Hydrology: {json.dumps(hydro, separators=(',', ':'))}\n"
         f"Weather: {json.dumps(weather, separators=(',', ':'))}"
@@ -207,7 +207,7 @@ def response_formatter_agent(
     risk_level = synthesis.get("risk_level", "moderate")
 
     return {
-        "area_id": gauge["station_id"],
+        "area_id": gauge["site_id"],
         "name": gauge["name"],
         "center": {"lat": gauge["lat"], "lng": gauge["lng"]},
         "risk_level": risk_level,
@@ -247,8 +247,9 @@ def risk_region_agent(lat: float, lng: float, radius_miles: float = 25) -> dict[
     environmental_risk_packets: list[dict] = []
     regions: list[dict] = []
 
+    print(f"GAUGE: {gauges}")
     for gauge in gauges:
-        sid = gauge["station_id"]
+        sid = gauge["site_id"]
         raw_packet = {
             "usgs":           get_usgs_water_data_tool.invoke({"station_id": sid}),
             "water_services": get_streamflow_context_tool.invoke({"station_id": sid}),
@@ -259,7 +260,8 @@ def risk_region_agent(lat: float, lng: float, radius_miles: float = 25) -> dict[
         environmental_risk_packets.append({
             "area_id":    sid,
             "name":       gauge["name"],
-            "river_name": gauge["river_name"],
+            # "river_name": gauge["river_name"],
+            "river_name": "",
             "center":     {"lat": gauge["lat"], "lng": gauge["lng"]},
             "raw_packet": raw_packet,
         })
