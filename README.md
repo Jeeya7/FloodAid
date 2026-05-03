@@ -185,10 +185,10 @@ Our long-term vision includes:
 
 | Name | Role |
 |----------|----------|
-| Jiya Pradhan | lorem ipsum |
-| Jayasnehasree Sannidhi | lorem ipsum |
-| Saranya Sounder Rajan | lorem ipsum |
-| Ngoc Le | lorem ipsum |
+| Jiya Pradhan | Developers |
+| Jayasnehasree Sannidhi | Developers |
+| Saranya Sounder Rajan | Developers|
+| Ngoc Le | Developers |
 
 
 ---
