@@ -312,7 +312,6 @@ def get_gauges_by_bounds(bounds: dict[str, float] | None = None) -> list[dict[st
             print(f"Skipping malformed station: {e}")
             continue
 
-    print(f"stations: {stations}")
     return stations
 
 
