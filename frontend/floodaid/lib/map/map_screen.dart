@@ -37,48 +37,150 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── Risk helpers ──────────────────────────────────────────────────────────
 
-  String _riskLevel() {
-    final score = (widget.riskData?['risk_score'] as num?)?.toInt() ?? 0;
-    if (score >= 70) return 'high';
-    if (score >= 40) return 'moderate';
-    return 'low';
+  String _overallRiskLevel() {
+    final regions = (widget.riskData?['regions'] as List?) ?? [];
+    if (regions.isEmpty) return 'low';
+    const order = ['low', 'moderate', 'high', 'critical'];
+    String worst = 'low';
+    for (final r in regions) {
+      final level = (r['risk_level'] ?? 'low') as String;
+      if (order.indexOf(level) > order.indexOf(worst)) {
+        worst = level;
+      }
+    }
+    return worst;
   }
 
-  Color _riskColor() {
-    switch (_riskLevel()) {
+  Color _colorForRiskLevel(String level) {
+    switch (level) {
+      case 'critical': return const Color(0xFFDC2626);
       case 'high':     return const Color(0xFFE05050);
       case 'moderate': return const Color(0xFFE8A030);
       default:         return const Color(0xFF4AAD6A);
     }
   }
 
-  String _riskLabel() {
-    switch (_riskLevel()) {
-      case 'high':     return 'HIGH FLOOD RISK';
-      case 'moderate': return 'MODERATE FLOOD RISK';
+  String _labelForRiskLevel(String level) {
+    switch (level) {
+      case 'critical': return 'CRITICAL FLOOD RISK — Evacuate immediately';
+      case 'high':     return 'HIGH FLOOD RISK — Take action now';
+      case 'moderate': return 'MODERATE FLOOD RISK — Stay alert';
       default:         return 'LOW FLOOD RISK — Area appears safe';
     }
   }
 
-  List<Marker> _buildResourceMarkers() {
-    final List resources = widget.resourcesData?['ranked_resources'] ?? [];
-    return resources.map<Marker>((r) {
-      final type = r['type'] ?? 'shelter';
+  // ── Region circle markers ─────────────────────────────────────────────────
+
+  List<CircleMarker> _buildRiskCircles() {
+    final regions = (widget.riskData?['regions'] as List?) ?? [];
+    return regions.map<CircleMarker?>((r) {
+      final level = (r['risk_level'] ?? 'low') as String;
+      final lat = (r['center']?['lat'] as num?)?.toDouble();
+      final lng = (r['center']?['lng'] as num?)?.toDouble();
+      if (lat == null || lng == null) return null;
+      final color = _colorForRiskLevel(level);
+      return CircleMarker(
+        point: LatLng(lat, lng),
+        radius: 18000,
+        useRadiusInMeter: true,
+        color: color.withOpacity(0.25),
+        borderColor: color.withOpacity(0.8),
+        borderStrokeWidth: 2,
+      );
+    }).whereType<CircleMarker>().toList();
+  }
+
+  // ── Region label markers ──────────────────────────────────────────────────
+
+  List<Marker> _buildRiskLabelMarkers() {
+    final regions = (widget.riskData?['regions'] as List?) ?? [];
+    return regions.map<Marker?>((r) {
+      final level = (r['risk_level'] ?? 'low') as String;
+      final lat = (r['center']?['lat'] as num?)?.toDouble();
+      final lng = (r['center']?['lng'] as num?)?.toDouble();
+      final name = (r['name'] ?? '') as String;
+      if (lat == null || lng == null) return null;
+      final color = _colorForRiskLevel(level);
       return Marker(
-        point: LatLng(
-          (r['lat'] as num).toDouble(),
-          (r['lng'] as num).toDouble(),
+        point: LatLng(lat, lng),
+        width: 120,
+        height: 48,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                level.toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.85),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                name.length > 20 ? '${name.substring(0, 20)}...' : name,
+                style: const TextStyle(fontSize: 8, color: Color(0xFF1F2937)),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
         ),
+      );
+    }).whereType<Marker>().toList();
+  }
+
+  // ── Resource markers ──────────────────────────────────────────────────────
+
+  List<Marker> _buildResourceMarkers() {
+    // Build coord lookup from recommended_resources which always has lat/lng
+    final Map<String, dynamic> coordLookup = {};
+    final rec = widget.resourcesData?['recommended_resources'] ?? {};
+    for (final category in ['hospital', 'shelter', 'food']) {
+      for (final r in (rec[category] as List? ?? [])) {
+        if (r['id'] != null) coordLookup[r['id'] as String] = r;
+      }
+    }
+
+    final List resources = widget.resourcesData?['ranked_resources'] ?? [];
+    return resources.map<Marker?>((r) {
+      final type = (r['type'] ?? 'unknown') as String;
+      final id = r['id'] as String?;
+
+      // Use ranked_resources coords first, fall back to recommended_resources lookup
+      final source = ((r['lat'] as num?)?.toDouble() ?? 0) != 0
+          ? r
+          : (id != null ? (coordLookup[id] ?? r) : r);
+
+      final lat = (source['lat'] as num?)?.toDouble();
+      final lng = (source['lng'] as num?)?.toDouble();
+
+      if (lat == null || lng == null || (lat == 0 && lng == 0)) return null;
+
+      return Marker(
+        point: LatLng(lat, lng),
         width: 36,
         height: 36,
         child: Tooltip(
-          message: r['name'] ?? type,
+          message: (r['name'] ?? type) as String,
           child: Icon(_iconForType(type), color: _colorForType(type), size: 30),
         ),
       );
-    }).toList();
+    }).whereType<Marker>().toList();
   }
 
   IconData _iconForType(String type) {
@@ -115,9 +217,79 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  // ── Legend ────────────────────────────────────────────────────────────────
+
+  Widget _buildLegend() {
+    return Positioned(
+      bottom: 80,
+      left: 16,
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.92),
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6)],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Flood Risk', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            _legendRow(const Color(0xFFDC2626), 'Critical'),
+            _legendRow(const Color(0xFFE05050), 'High'),
+            _legendRow(const Color(0xFFE8A030), 'Moderate'),
+            _legendRow(const Color(0xFF4AAD6A), 'Low'),
+            const SizedBox(height: 6),
+            const Text('Resources', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            _legendIcon(Icons.local_hospital, Colors.red, 'Hospital'),
+            _legendIcon(Icons.fastfood, Colors.orange, 'Food'),
+            _legendIcon(Icons.home, Colors.blue, 'Shelter'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _legendRow(Color color, String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(label, style: const TextStyle(fontSize: 10)),
+        ],
+      ),
+    );
+  }
+
+  Widget _legendIcon(IconData icon, Color color, String label) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 6),
+          Text(label, style: const TextStyle(fontSize: 10)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final markers = _buildResourceMarkers();
+    final riskLevel = _overallRiskLevel();
+    final riskCircles = _buildRiskCircles();
+    final riskLabels = _buildRiskLabelMarkers();
+    final resourceMarkers = _buildResourceMarkers();
 
     return Scaffold(
       body: Stack(
@@ -140,8 +312,12 @@ class _MapScreenState extends State<MapScreen> {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.floodaid.app',
               ),
-              if (markers.isNotEmpty)
-                MarkerLayer(markers: markers),
+              if (riskCircles.isNotEmpty)
+                CircleLayer(circles: riskCircles),
+              if (riskLabels.isNotEmpty)
+                MarkerLayer(markers: riskLabels),
+              if (resourceMarkers.isNotEmpty)
+                MarkerLayer(markers: resourceMarkers),
               if (widget.userLocation != null)
                 MarkerLayer(
                   markers: [
@@ -159,16 +335,15 @@ class _MapScreenState extends State<MapScreen> {
                 ),
             ],
           ),
-
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             child: Container(
-              color: _riskColor(),
+              color: _colorForRiskLevel(riskLevel),
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               child: Text(
-                _riskLabel(),
+                _labelForRiskLevel(riskLevel),
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
@@ -178,10 +353,9 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
           ),
-
           if (widget.loading)
             const Center(child: CircularProgressIndicator()),
-
+          _buildLegend(),
           Positioned(
             bottom: 20,
             right: 16,

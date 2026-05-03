@@ -25,6 +25,8 @@ class _MainShellState extends State<MainShell> {
   static const _newportLat = 44.6368;
   static const _newportLng = -124.0535;
 
+ 
+
   // Shared app data — fetched once, passed to all screens
   LatLng?               _userLocation;
   Map<String, dynamic>? _resourcesData;
