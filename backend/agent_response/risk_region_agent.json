@@ -5,6 +5,62 @@
     "west": -124.1,
     "east": -123.8
   },
+  "debug_steps": [
+    "Fetched 1 gauges within bounds.",
+    "Collected data for Yaquina River at Newport, OR.",
+    "  data_quality \u2192 usable=True, confidence=1.0",
+    "  hydrology \u2192 risk=moderate, trend=rising",
+    "  weather \u2192 risk=moderate, alert=watch",
+    "  synthesis \u2192 final_risk=moderate, confidence=0.9",
+    "Generated overall summary."
+  ],
+  "regions": [
+    {
+      "area_id": "11490000",
+      "name": "Yaquina River at Newport, OR",
+      "center": {
+        "lat": 44.6367,
+        "lng": -124.0535
+      },
+      "risk_level": "moderate",
+      "color": "yellow",
+      "confidence": 0.9,
+      "evidence": {
+        "data_quality": {
+          "usable": true,
+          "missing_fields": [],
+          "data_warnings": [],
+          "confidence_modifier": 1.0
+        },
+        "hydrology": {
+          "hydrology_risk": "moderate",
+          "hydrology_evidence": [
+            "gage_height_ft: 9.8 (below flood_stage_ft: 12.0)",
+            "streamflow_percentile: 68 (above normal)",
+            "water_level_trend: rising",
+            "streamflow_status: above_normal with 40% above normal",
+            "anomaly_level: moderate"
+          ],
+          "trend": "rising",
+          "reasoning_summary": "Current gage height is below flood stage but rising, with streamflow above normal (68th percentile, 40% above average) and a moderate anomaly, indicating elevated but not imminent flood risk."
+        },
+        "weather": {
+          "weather_risk": "moderate",
+          "weather_evidence": [
+            "Flood watch issued",
+            "Total rain forecast 1.6 inches",
+            "Rain expected in next 6 hours 0.6 inches",
+            "Storm probability 45%",
+            "Forecast summary indicates coastal storm with moderate rainfall and elevated river levels"
+          ],
+          "alert_level": "watch",
+          "reasoning_summary": "A flood watch is active, with moderate total rainfall forecast (1.6 inches) and a notable short-term rain amount (0.6 inches in 6 hours). Storm probability is 45%, indicating a significant chance of precipitation. Combined with elevated river levels mentioned in the forecast, the situation warrants moderate risk and a watch alert level."
+        }
+      },
+      "reasoning_summary": "Hydrology and weather assessments both indicate moderate flood risk: river stage is below flood stage but rising with above-normal streamflow, while a flood watch is active with moderate rainfall forecast and a 45% storm probability. The data are complete and reliable, leading to high confidence in the moderate risk rating.",
+      "recommended_action": "Continue monitoring river levels and weather updates; prepare for possible flooding by reviewing emergency plans, securing property in low-lying areas, and staying alert for any upgrade to a flood warning."
+    }
+  ],
   "environmental_risk_packets": [
     {
       "area_id": "11490000",
@@ -40,33 +96,6 @@
       }
     }
   ],
-  "risk_regions": [
-    {
-      "area_id": "11490000",
-      "name": "Yaquina River at Newport, OR",
-      "river_name": "Yaquina River",
-      "risk_level": "HIGH",
-      "risk_score": 85,
-      "color": "red",
-      "center": {
-        "lat": 44.6367,
-        "lng": -124.0535
-      },
-      "radius_miles": 25,
-      "reasons": [
-        "USGS reports current gage height at 9.8 ft (81.6% of flood stage) with a rising trend.",
-        "Water Services indicates above normal streamflow with a moderate anomaly (40% above normal).",
-        "Weather.gov has issued a flood watch, forecasting 1.6 inches of rain and a coastal storm bringing elevated river levels."
-      ],
-      "data_sources_used": [
-        "USGS",
-        "Water Services",
-        "Weather.gov"
-      ]
-    }
-  ],
-  "debug_steps": [
-    "Collected environmental data for 1 gauges.",
-    "Gemini analyzed packets and classified flood risk regions."
-  ]
+  "summary": "The Yaquina River at Newport",
+  "generated_at": "2026-05-02T23:53:46.027729+00:00"
 }

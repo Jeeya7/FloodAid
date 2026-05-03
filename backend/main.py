@@ -1,6 +1,10 @@
 import json
 
-from agents.risk_region_agent import risk_region_agent
+from dotenv import load_dotenv
+
+load_dotenv()  # loads OPENROUTER_API_KEY (and others) from .env before the agent imports
+
+from agents.risk_region_agent import risk_region_agent  # noqa: E402
 
 state = {
     "map_bounds": {
