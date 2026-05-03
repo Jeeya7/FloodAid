@@ -1,10 +1,22 @@
 import json
-
 from dotenv import load_dotenv
+load_dotenv()
 
-load_dotenv()  # loads OPENROUTER_API_KEY (and others) from .env before the agent imports
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from agents.risk_region_agent import risk_region_agent
+from chat import router as chat_router
 
-from agents.risk_region_agent import risk_region_agent  # noqa: E402
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(chat_router)
 
 state = {
     "map_bounds": {
