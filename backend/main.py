@@ -1,14 +1,6 @@
 import json
+
 from dotenv import load_dotenv
-load_dotenv()
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from agents.risk_region_agent import risk_region_agent
-from chat import router as chat_router
-
-app = FastAPI()
-
 
 load_dotenv()  # must run before any agent import reads env vars
 
