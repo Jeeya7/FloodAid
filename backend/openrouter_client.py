@@ -11,10 +11,6 @@ from typing import Any
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 MODEL = "nvidia/nemotron-3-super-120b-a12b"
 
-# Read from environment — never hardcode
-_API_KEY: str = os.environ.get("OPENROUTER_API_KEY", "")
-
-
 def chat(
     system: str,
     user: str,
@@ -27,7 +23,9 @@ def chat(
 
     Raises RuntimeError on HTTP errors or missing API key.
     """
-    if not _API_KEY:
+    # Read the key here (not at import time) so load_dotenv() always runs first
+    api_key = os.environ.get("OPENROUTER_API_KEY", "")
+    if not api_key:
         raise RuntimeError(
             "OPENROUTER_API_KEY is not set. "
             "Add it to your .env file or export it as an environment variable."
@@ -47,7 +45,7 @@ def chat(
         f"{OPENROUTER_BASE_URL}/chat/completions",
         data=payload,
         headers={
-            "Authorization": f"Bearer {_API_KEY}",
+            "Authorization": f"Bearer {api_key}",
             "Content-Type":  "application/json",
         },
         method="POST",

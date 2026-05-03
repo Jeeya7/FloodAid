@@ -24,6 +24,7 @@ from tools.risk_region_tools import (
     get_streamflow_context_tool,
     get_usgs_water_data_tool,
     get_weather_context_tool,
+    create_bounds_tool
 )
 
 MAX_GAUGES = 3
@@ -224,7 +225,7 @@ def response_formatter_agent(
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 
-def risk_region_agent(state: dict[str, Any]) -> dict[str, Any]:
+def risk_region_agent(lat: float, lng: float, radius_miles: float = 25) -> dict[str, Any]:
     """
     Full multi-step flood risk pipeline.
 
@@ -233,13 +234,15 @@ def risk_region_agent(state: dict[str, Any]) -> dict[str, Any]:
     3. Synthesis combines all evidence into a final verdict per region.
     4. Formatter produces the frontend-ready JSON.
     """
-    bounds = state.get("map_bounds") or NEWPORT_BOUNDS
-    debug_steps: list[str] = list(state.get("debug_steps", []))
+    bounds = create_bounds_tool.invoke({
+        "lat": lat,
+        "lng": lng,
+        "radius_miles": radius_miles,
+    })
 
     # ── Step 1: collect raw data (Python, no LLM) ────────────────────────────
     gauges = get_gauges_by_bounds_tool.invoke({"bounds": bounds})
     gauges = gauges[:MAX_GAUGES]
-    debug_steps.append(f"Fetched {len(gauges)} gauges within bounds.")
 
     environmental_risk_packets: list[dict] = []
     regions: list[dict] = []
@@ -261,20 +264,15 @@ def risk_region_agent(state: dict[str, Any]) -> dict[str, Any]:
             "raw_packet": raw_packet,
         })
 
-        debug_steps.append(f"Collected data for {gauge['name']}.")
 
         # ── Steps 2–5: sub-agent reasoning (LLM calls) ───────────────────────
         quality   = data_quality_agent(raw_packet)
-        debug_steps.append(f"  data_quality → usable={quality.get('usable')}, confidence={quality.get('confidence_modifier')}")
 
         hydro     = hydrology_agent(raw_packet, quality)
-        debug_steps.append(f"  hydrology → risk={hydro.get('hydrology_risk')}, trend={hydro.get('trend')}")
 
         weather   = weather_risk_agent(raw_packet, quality)
-        debug_steps.append(f"  weather → risk={weather.get('weather_risk')}, alert={weather.get('alert_level')}")
 
         synthesis = risk_synthesis_agent(gauge, quality, hydro, weather)
-        debug_steps.append(f"  synthesis → final_risk={synthesis.get('risk_level')}, confidence={synthesis.get('confidence')}")
 
         # ── Step 6: format ────────────────────────────────────────────────────
         region = response_formatter_agent(gauge, quality, hydro, weather, synthesis)
@@ -282,15 +280,15 @@ def risk_region_agent(state: dict[str, Any]) -> dict[str, Any]:
 
     # ── Build overall summary (single extra LLM call) ────────────────────────
     summary = _build_summary(regions)
-    debug_steps.append("Generated overall summary.")
 
     return {
-        **state,
+        "lat": lat,
+        "lang": lng,
+        "raidus": radius_miles,
         "regions": regions,
         "environmental_risk_packets": environmental_risk_packets,
         "summary": summary,
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "debug_steps": debug_steps,
     }
 
 
