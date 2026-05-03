@@ -15,8 +15,11 @@
 
 import json
 import math
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any
+from concurrent.futures import ThreadPoolExecutor
+
 
 from openrouter_client import chat, parse_json_response
 from tools.resource_tools import (
@@ -28,6 +31,9 @@ from tools.resource_tools import (
 
 # Cap resources sent to the LLM to keep prompts small and stay inside quota
 MAX_RESOURCES = 10
+
+BASE_DIR = Path(__file__).resolve().parent
+AGENT_RESPONSE_PATH = BASE_DIR.parent / "agent_response" / "emergency_resource_agent.json"
 
 
 # ── Fallback templates ────────────────────────────────────────────────────────
@@ -61,21 +67,41 @@ def _fallback_availability(resources: list[dict]) -> dict[str, Any]:
 
 
 def _fallback_synthesis(resources: list[dict]) -> dict[str, Any]:
-    # Sort by whatever combined score fields exist; pick the first open resource
-    open_resources = [r for r in resources if r.get("status") != "closed"]
-    best = open_resources[0] if open_resources else (resources[0] if resources else {})
+    ranked = []
+
+    for r in resources:
+        status = r.get("status", "unknown")
+        score = 0.0 if status == "closed" else r.get("_combined_score", 0.5)
+
+        ranked.append({
+            "id": r["id"],
+            "overall_score": score,
+            "recommended": False,
+            "reasoning": "Synthesis unavailable; ranked by fallback score.",
+        })
+
+    ranked.sort(key=lambda x: x["overall_score"], reverse=True)
+
+    best_by_category = {
+        "hospital": None,
+        "shelter": None,
+        "food": None,
+    }
+
+    lookup = {r["id"]: r for r in resources}
+
+    for item in ranked:
+        base = lookup.get(item["id"], {})
+        category = base.get("category")
+
+        if category in best_by_category and best_by_category[category] is None:
+            best_by_category[category] = item["id"]
+            item["recommended"] = True
+
     return {
-        "ranked_resources": [
-            {
-                "id": r["id"],
-                "overall_score": r.get("_combined_score", 0.5),
-                "recommended": r["id"] == best.get("id"),
-                "reasoning": "Synthesis unavailable; ranked by combined score.",
-            }
-            for r in resources
-        ],
-        "best_option_id": best.get("id", ""),
-        "summary": "Synthesis agent failed; resources ranked by combined score estimate.",
+        "ranked_resources": ranked,
+        "best_by_category": best_by_category,
+        "summary": "Synthesis agent failed; resources ranked by fallback estimate.",
     }
 
 
@@ -84,19 +110,35 @@ def _fallback_synthesis(resources: list[dict]) -> dict[str, Any]:
 def resource_collection_step(
     lat: float,
     lng: float,
-    radius_miles: float,
+    radius_miles: float = 25,
 ) -> list[dict[str, Any]]:
     """
     Call the three resource tools and flatten all results into a single list.
     Each resource gets a 'category' field ('food', 'hospital', or 'shelter')
     so downstream steps can see what kind of resource it is.
     """
-    bounds = create_bounds_tool.invoke(lat, lng)
+    bounds = create_bounds_tool.invoke({"lat": lat, "lng": lng})
     
     # TODO: Change this
-    food_result     = get_food_resources_tool.invoke({"lat": lat, "lng": lng, "radius_miles": radius_miles})
-    hospital_result = get_hospitals_tool.invoke({"lat": lat, "lng": lng, "radius_miles": radius_miles})
-    shelter_result  = get_shelters_tool.invoke({"lat": lat, "lng": lng, "radius_miles": radius_miles})
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        food_future = executor.submit(
+            get_food_resources_tool.invoke,
+            {"lat": lat, "lng": lng, "radius_miles": radius_miles},
+        )
+
+        hospital_future = executor.submit(
+            get_hospitals_tool.invoke,
+            {"lat": lat, "lng": lng, "radius_miles": radius_miles},
+        )
+
+        shelter_future = executor.submit(
+            get_shelters_tool.invoke,
+            {"lat": lat, "lng": lng, "radius_miles": radius_miles},
+        )
+
+        food_result = food_future.result()
+        hospital_result = hospital_future.result()
+        shelter_result = shelter_future.result()
 
     flat: list[dict[str, Any]] = []
 
@@ -221,52 +263,66 @@ def resource_synthesis_agent(
     availability_map: dict[str, dict],
 ) -> dict[str, Any]:
     """
-    Combine safety, availability, and distance scores into a final ranking.
-    The LLM determines overall scores and picks the best option.
+    LLM dynamically combines safety, availability, and distance scores.
+    Python only prepares compact inputs and provides fallback if LLM fails.
     """
-    # Pre-attach scores to each resource so the prompt is self-contained
+
     scored = []
+
     for r in resources:
         sid = r["id"]
+
         scored.append({
-            "id":                 sid,
-            "name":               r["name"],
-            "category":           r["category"],
-            "distance_miles":     r.get("distance_miles", 0),
-            "distance_score":     r.get("distance_score", 0.5),
-            "safety_score":       safety_map.get(sid, {}).get("safety_score", 0.5),
-            "safety_level":       safety_map.get(sid, {}).get("safety_level", "moderate"),
+            "id": sid,
+            "category": r["category"],
+            "distance_score": r.get("distance_score", 0.5),
+            "safety_score": safety_map.get(sid, {}).get("safety_score", 0.5),
             "availability_score": availability_map.get(sid, {}).get("availability_score", 0.5),
-            "status":             availability_map.get(sid, {}).get("status", r.get("status", "unknown")),
+            "status": availability_map.get(sid, {}).get("status", r.get("status", "unknown")),
         })
-        # Store combined estimate for fallback use
-        r["_combined_score"] = round(
-            scored[-1]["safety_score"] * 0.35
-            + scored[-1]["availability_score"] * 0.35
-            + scored[-1]["distance_score"] * 0.30,
-            4,
-        )
 
     system = (
-        "You are a flood emergency resource coordinator. "
-        "Each resource has safety, availability, and distance scores (all 0–1, higher is better). "
-        "Combine them into an overall_score. Pick the single best option for someone needing help now. "
-        "Heavily penalise closed resources. Prefer the closest open, safe resource. "
-        "Return ONLY valid JSON — no markdown:\n"
+        "You are a flood emergency resource synthesis agent. "
+        "Calculate overall_score dynamically for each resource using safety_score, availability_score, "
+        "distance_score, status, category, and emergency usefulness. "
+        "Heavily penalize closed resources. "
+        "Rank all resources overall. "
+        "Also choose the best resource id for each category: hospital, shelter, and food. "
+        "If a category has no resources, use null. "
+        "Return ONLY valid JSON. No markdown. No explanation outside JSON. "
+        "Do not show calculations. "
+        "Use this exact schema:\n"
         '{"ranked_resources":[{"id":"string","overall_score":0.0,"recommended":false,"reasoning":"string"}],'
-        '"best_option_id":"string","summary":"string"}'
+        '"best_by_category":{"hospital":null,"shelter":null,"food":null},'
+        '"summary":"string"}'
     )
+
     user = "Resources:\n" + json.dumps(scored, separators=(",", ":"))
 
     try:
         raw = chat(system, user)
-        return parse_json_response(raw)
+
+        print("\n=== SYNTHESIS RAW ===\n", raw)
+
+        parsed = parse_json_response(raw)
+
+        if not isinstance(parsed, dict):
+            raise ValueError("Synthesis response was not a JSON object")
+
+        if "ranked_resources" not in parsed:
+            raise ValueError("Synthesis JSON missing ranked_resources")
+
+        if "best_by_category" not in parsed:
+            raise ValueError("Synthesis JSON missing best_by_category")
+
+        return parsed
+
     except Exception as exc:
+        print("\n=== SYNTHESIS ERROR ===\n", str(exc))
         result = _fallback_synthesis(resources)
         result["error"] = str(exc)
         return result
-
-
+    
 # ── Step 6 — response_formatter_step (Python) ────────────────────────────────
 
 def response_formatter_step(
@@ -275,50 +331,70 @@ def response_formatter_step(
     availability_map: dict[str, dict],
     synthesis: dict[str, Any],
 ) -> dict[str, Any]:
-    """
-    Merge all step outputs into the final frontend-ready JSON.
-    Pure Python — no LLM call.
-    """
+
+    if synthesis is None:
+        synthesis = _fallback_synthesis(resources)
+
     resource_lookup = {r["id"]: r for r in resources}
     ranked_raw: list[dict] = synthesis.get("ranked_resources", [])
-    best_id: str = synthesis.get("best_option_id", "")
+    best_by_category = synthesis.get("best_by_category", {})
 
     ranked_resources = []
+
     for item in ranked_raw:
-        rid = item["id"]
+        rid = item.get("id")
         base = resource_lookup.get(rid, {})
+
         ranked_resources.append({
-            "id":            rid,
-            "name":          base.get("name", "Unknown"),
-            "type":          base.get("category", "unknown"),
+            "id": rid,
+            "name": base.get("name", "Unknown"),
+            "type": base.get("category", "unknown"),
+            "lat": base.get("lat", 0),
+            "lng": base.get("lng", 0),
             "distance_miles": base.get("distance_miles", 0),
             "overall_score": item.get("overall_score", 0),
-            "status":        availability_map.get(rid, {}).get("status", base.get("status", "unknown")),
+            "status": availability_map.get(rid, {}).get(
+                "status",
+                base.get("status", "unknown"),
+            ),
+            "reasoning": item.get("reasoning", ""),
         })
 
-    # Sort by overall_score descending so the frontend can use the list directly
     ranked_resources.sort(key=lambda x: x["overall_score"], reverse=True)
 
-    # Build the recommended resource block
-    best_base = resource_lookup.get(best_id, {})
-    best_synthesis = next((r for r in ranked_raw if r["id"] == best_id), {})
-    recommended_resource = {
-        "id":             best_id,
-        "name":           best_base.get("name", "Unknown"),
-        "type":           best_base.get("category", "unknown"),
-        "lat":            best_base.get("lat", 0),
-        "lng":            best_base.get("lng", 0),
-        "distance_miles": best_base.get("distance_miles", 0),
-        "status":         availability_map.get(best_id, {}).get("status", best_base.get("status", "unknown")),
-        "reasoning":      best_synthesis.get("reasoning", synthesis.get("summary", "")),
-    }
+    def build_recommended(category: str):
+        rid = best_by_category.get(category)
+
+        if rid is None:
+            return None
+
+        base = resource_lookup.get(rid)
+        ranked_item = next((r for r in ranked_resources if r["id"] == rid), None)
+
+        if not base or not ranked_item:
+            return None
+
+        return ranked_item
 
     return {
-        "recommended_resource": recommended_resource,
-        "ranked_resources":     ranked_resources,
-        "summary":              synthesis.get("summary", ""),
-        "generated_at":         datetime.now(timezone.utc).isoformat(),
+        "recommended_resources": {
+            "hospital": build_recommended("hospital"),
+            "shelter": build_recommended("shelter"),
+            "food": build_recommended("food"),
+        },
+        "ranked_resources": ranked_resources,
+        "summary": synthesis.get("summary", ""),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
     }
+
+
+def _save_agent_response(payload: dict[str, Any]) -> None:
+    try:
+        AGENT_RESPONSE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with AGENT_RESPONSE_PATH.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+    except OSError:
+        pass
 
 
 # ── Main entry point ──────────────────────────────────────────────────────────
@@ -342,12 +418,14 @@ def emergency_resource_agent(lat, lng) -> dict[str, Any]:
     resources = resource_collection_step(lat, lng)
 
     if not resources:
-        return {
+        result = {
             "recommended_resource": None,
             "ranked_resources": [],
             "summary": "No emergency resources found near this location.",
             "generated_at": datetime.now(timezone.utc).isoformat(),
         }
+        _save_agent_response(result)
+        return result
 
     # ── Step 2: safety scoring (LLM) ────────────────────────────────────────
     safety_result = resource_safety_agent(resources)
@@ -370,6 +448,5 @@ def emergency_resource_agent(lat, lng) -> dict[str, Any]:
     # ── Step 6: format final output (Python) ─────────────────────────────────
     final = response_formatter_step(resources, safety_map, availability_map, synthesis)
 
-    return {
-        **final
-    }
+    _save_agent_response(final)
+    return final
