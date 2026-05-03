@@ -26,4 +26,5 @@ __all__ = [
     "get_hospitals_tool",
     "get_shelters_tool",
     "get_all_resources_tool",
+    "create_bounds_tool"
 ]
