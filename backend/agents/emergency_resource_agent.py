@@ -93,6 +93,7 @@ def resource_collection_step(
     """
     bounds = create_bounds_tool.invoke(lat, lng)
     
+    # TODO: Change this
     food_result     = get_food_resources_tool.invoke({"lat": lat, "lng": lng, "radius_miles": radius_miles})
     hospital_result = get_hospitals_tool.invoke({"lat": lat, "lng": lng, "radius_miles": radius_miles})
     shelter_result  = get_shelters_tool.invoke({"lat": lat, "lng": lng, "radius_miles": radius_miles})
