@@ -13,12 +13,12 @@ The system ingests live environmental signals from public government APIs and tr
 ## Why FloodAid?
 
 Every year, floods kill hundreds of Americans and displace hundreds of thousands more. When a flood warning hits, residents face a terrifying combination of:
-* Information overload — too many alerts, maps, and news updates with no clear next step
-* Decision paralysis — not knowing whether to stay, evacuate, or call for help
-* Resource blindness — not knowing which shelters are open, which roads are safe, or where the nearest hospital is
-* Emotional distress — fear and panic that make rational decision-making harder
+* Information overload: too many alerts, maps, and news updates with no clear next step
+* Decision paralysis: not knowing whether to stay, evacuate, or call for help
+* Resource blindness: not knowing which shelters are open, which roads are safe, or where the nearest hospital is
+* Emotional distress: fear and panic that make rational decision-making harder
 
-Existing tools like weather apps and FEMA alerts tell residents that there is a flood. FloodAid tells them what to do about it, where to go, and how to get there safely — all while providing calm emotional support through our AI chatbot, Droppy.
+Existing tools like weather apps and FEMA alerts tell residents that there is a flood. FloodAid tells them what to do about it, where to go, and how to get there safely, all while providing calm emotional support through our AI chatbot, Droppy.
 
 ## Features
 
@@ -33,6 +33,8 @@ Flood risk is computed using public APIs:
 * Rainfall forecast severity
 * Alert conditions
 
+![Map interface of FloodAid with markers for nearby resource and overlaid color-coded flood risk](frontend/floodaid/assets/map.png)
+
 ### Emergency Resource Finder
 
 The resources tab calls backend in real time, passing user's GPS coordinates.
@@ -40,6 +42,15 @@ The resources tab calls backend in real time, passing user's GPS coordinates.
 It returns a ranked list of hospitals, urgent care clinics, shelters, and food banks sorted by distance from user location. 
 
 Each card shows the facility name, type, address, and distance in miles.
+
+Food resources
+![Nearby food resources presented by FloodAid](frontend/floodaid/assets/food.png)
+
+Shelters
+![Nearby shelters presented by FloodAid](frontend/floodaid/assets/shelter.png)
+
+Hospitals
+![Nearby hospital presented by FloodAid](frontend/floodaid/assets/hospitals.png)
 
 ### Droppy — AI Support Chatbot
 
@@ -57,7 +68,7 @@ Droppy provides calm and understanding guidance during stressful these stressful
 ### System architecture
 ![](frontend/floodaid/assets/system_architecture.png)
 
-### Agent pipeline
+### Agent process (per-call)
 ![](frontend/floodaid/assets/agent_flow.png)
 
 
@@ -78,9 +89,6 @@ Droppy provides calm and understanding guidance during stressful these stressful
 | National Weather Service (NWS) API | National Weather Service Data | Rain information and weather alerts for risk analysis |
 | OpenStreetMap Overpass API | Hospital and other resources | For resources tab |
 
-## System Design
-
-* Multi-agent service orchestration
 
 ---
 
@@ -164,9 +172,9 @@ This starts both the backend server and the Flutter app simultaneously. Press Ct
 
 ## Hackathon
 
-FloodAid was built in under 24 hours at BeaverHacks 2026 by a team of four students passionate about using AI for real-world impact. We chose floods because they are one of the most common and deadly natural disasters in the United States — and because existing flood apps tell you what is happening, but not what to do about it.
+FloodAid was built in under 24 hours at BeaverHacks 2026 by a team of four students passionate about using AI for real-world impact. We chose floods because they are one of the most common and deadly natural disasters in the United States, and because existing flood apps tell you what is happening, but not what to do about it.
 
-FloodAid changes that. It does not just show you a flood map. It reasons about your specific situation, finds the resources closest to you that are actually safe to reach, and guides you there with calm, human-centered language — even if you are scared, even if you have never evacuated before.
+FloodAid changes that. It does not just show you a flood map. It reasons about your specific situation, finds the resources closest to you that are actually safe to reach, and guides you there with calm, human-centered language even if you are scared, even if you have never evacuated before.
 
 
 ### Vision
