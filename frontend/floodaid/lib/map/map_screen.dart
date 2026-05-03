@@ -17,23 +17,16 @@ class _MapScreenState extends State<MapScreen> {
   LatLng? _userLocation;
   bool _loading = true;
 
+  // Risk
+  String _riskLevel = 'low'; // 'high', 'moderate', 'low'
+
+  // Resource markers
+  List<Marker> _resourceMarkers = [];
+
   @override
   void initState() {
     super.initState();
     _getLocation();
-  }
-
-  Future<void> _callBackend(double lat, double lng) async {
-    try {
-      final response = await http.post(
-        Uri.parse('http://localhost:8000/resources'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'latitude': lat, 'longitude': lng}),
-      );
-      print('Backend: ${response.body}');
-    } catch (e) {
-      print('Backend error: $e');
-    }
   }
 
   Future<void> _getLocation() async {
@@ -54,11 +47,132 @@ class _MapScreenState extends State<MapScreen> {
 
       _mapController.move(_userLocation!, 12.0);
 
-      // Send coordinates to backend
-      await _callBackend(position.latitude, position.longitude);
+      // Call both APIs
+      await Future.wait([
+        _fetchRisk(position.latitude, position.longitude),
+        _fetchResources(position.latitude, position.longitude),
+      ]);
 
     } catch (e) {
       setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _fetchRisk(double lat, double lng) async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:8000/api/risk-regions'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'lat': lat, 'lng': lng, 'radius_miles': 25}),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final score = data['risk_score'] ?? 0;
+        setState(() {
+          if (score >= 70) {
+            _riskLevel = 'high';
+          } else if (score >= 40) {
+            _riskLevel = 'moderate';
+          } else {
+            _riskLevel = 'low';
+          }
+        });
+      }
+    } catch (e) {
+      print('Risk API error: $e');
+    }
+  }
+
+  Future<void> _fetchResources(double lat, double lng) async {
+    try {
+      final response = await http.post(
+        Uri.parse('http://localhost:8000/api/resources'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'lat': lat, 'lng': lng, 'radius_miles': 25}),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List resources = data['resources'] ?? [];
+        setState(() {
+          _resourceMarkers = resources.map<Marker>((r) {
+            final type = r['type'] ?? 'shelter';
+            return Marker(
+              point: LatLng(
+                (r['lat'] as num).toDouble(),
+                (r['lng'] as num).toDouble(),
+              ),
+              width: 36,
+              height: 36,
+              child: Tooltip(
+                message: r['name'] ?? type,
+                child: Icon(
+                  _iconForType(type),
+                  color: _colorForType(type),
+                  size: 30,
+                ),
+              ),
+            );
+          }).toList();
+        });
+      }
+    } catch (e) {
+      print('Resources API error: $e');
+    }
+  }
+
+  IconData _iconForType(String type) {
+    switch (type) {
+      case 'hospital':
+      case 'urgent_care':
+      case 'clinic':
+        return Icons.local_hospital;
+      case 'food_bank':
+      case 'food':
+        return Icons.fastfood;
+      case 'shelter':
+      case 'evacuation_center':
+        return Icons.home;
+      default:
+        return Icons.place;
+    }
+  }
+
+  Color _colorForType(String type) {
+    switch (type) {
+      case 'hospital':
+      case 'urgent_care':
+      case 'clinic':
+        return Colors.red;
+      case 'food_bank':
+      case 'food':
+        return Colors.orange;
+      case 'shelter':
+      case 'evacuation_center':
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Color _riskColor() {
+    switch (_riskLevel) {
+      case 'high':
+        return const Color(0xFFE05050);
+      case 'moderate':
+        return const Color(0xFFE8A030);
+      default:
+        return const Color(0xFF4AAD6A);
+    }
+  }
+
+  String _riskLabel() {
+    switch (_riskLevel) {
+      case 'high':
+        return 'HIGH FLOOD RISK';
+      case 'moderate':
+        return 'MODERATE FLOOD RISK';
+      default:
+        return 'LOW FLOOD RISK — Area appears safe';
     }
   }
 
@@ -90,6 +204,10 @@ class _MapScreenState extends State<MapScreen> {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.floodaid.app',
               ),
+              // Resource markers
+              if (_resourceMarkers.isNotEmpty)
+                MarkerLayer(markers: _resourceMarkers),
+              // User location
               if (_userLocation != null)
                 MarkerLayer(
                   markers: [
@@ -108,9 +226,31 @@ class _MapScreenState extends State<MapScreen> {
             ],
           ),
 
+          // Risk banner at top
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              color: _riskColor(),
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+              child: Text(
+                _riskLabel(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+
+          // Loading spinner
           if (_loading)
             const Center(child: CircularProgressIndicator()),
 
+          // Re-center button
           Positioned(
             bottom: 20,
             right: 16,
@@ -124,6 +264,41 @@ class _MapScreenState extends State<MapScreen> {
               child: const Icon(Icons.my_location, color: Colors.white),
             ),
           ),
+
+          // Legend
+          Positioned(
+            bottom: 90,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 6)],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _legendItem(Icons.local_hospital, Colors.red, 'Hospital'),
+                  _legendItem(Icons.fastfood, Colors.orange, 'Food Bank'),
+                  _legendItem(Icons.home, Colors.blue, 'Shelter'),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _legendItem(IconData icon, Color color, String label) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 6),
+          Text(label, style: const TextStyle(fontSize: 11)),
         ],
       ),
     );

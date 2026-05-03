@@ -15,6 +15,7 @@
 
 import json
 import math
+from pathlib import Path
 from datetime import datetime, timezone
 from typing import Any
 from concurrent.futures import ThreadPoolExecutor
@@ -31,12 +32,14 @@ from tools.resource_tools import (
 # Cap resources sent to the LLM to keep prompts small and stay inside quota
 MAX_RESOURCES = 10
 
+
 # How many top resources to return per category
 TOP_N = 3
 
 # Weights used by Python scoring in resource_synthesis_agent
 _WEIGHTS = {"safety": 0.4, "availability": 0.4, "distance": 0.2}
 _CATEGORY_MULTIPLIER = {"hospital": 1.2, "shelter": 1.1, "food": 1.0}
+
 
 
 # ── Fallback templates ────────────────────────────────────────────────────────
@@ -410,6 +413,15 @@ def response_formatter_step(
     }
 
 
+def _save_agent_response(payload: dict[str, Any]) -> None:
+    try:
+        AGENT_RESPONSE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with AGENT_RESPONSE_PATH.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+    except OSError:
+        pass
+
+
 # ── Main entry point ──────────────────────────────────────────────────────────
 
 def emergency_resource_agent(lat, lng) -> dict[str, Any]:
@@ -420,12 +432,16 @@ def emergency_resource_agent(lat, lng) -> dict[str, Any]:
     resources = resource_collection_step(lat, lng)
 
     if not resources:
+
         return {
             "recommended_resources": {"hospital": [], "shelter": [], "food": []},
             "ranked_resources":      [],
             "summary":               "No emergency resources found near this location.",
             "generated_at":          datetime.now(timezone.utc).isoformat(),
+
         }
+        _save_agent_response(result)
+        return result
 
     # ── Steps 2 + 3 + 4: safety (LLM), availability (LLM), distance (Python)
     # All three are independent — run them concurrently.
@@ -452,3 +468,4 @@ def emergency_resource_agent(lat, lng) -> dict[str, Any]:
     final = response_formatter_step(resources, safety_map, availability_map, synthesis)
 
     return {**final}
+

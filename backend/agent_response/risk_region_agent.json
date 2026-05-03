@@ -1,101 +1,260 @@
 {
-  "map_bounds": {
-    "south": 44.55,
-    "north": 44.75,
-    "west": -124.1,
-    "east": -123.8
-  },
-  "debug_steps": [
-    "Fetched 1 gauges within bounds.",
-    "Collected data for Yaquina River at Newport, OR.",
-    "  data_quality \u2192 usable=True, confidence=1.0",
-    "  hydrology \u2192 risk=moderate, trend=rising",
-    "  weather \u2192 risk=moderate, alert=watch",
-    "  synthesis \u2192 final_risk=moderate, confidence=0.9",
-    "Generated overall summary."
-  ],
+  "lat": 44.63,
+  "lang": -124.05,
+  "raidus": 25,
   "regions": [
     {
-      "area_id": "11490000",
-      "name": "Yaquina River at Newport, OR",
+      "area_id": "14305500",
+      "name": "SILETZ RIVER AT SILETZ, OR",
       "center": {
-        "lat": 44.6367,
-        "lng": -124.0535
+        "lat": 44.7151172,
+        "lng": -123.8873348
       },
-      "risk_level": "moderate",
-      "color": "yellow",
-      "confidence": 0.9,
+      "risk_level": "low",
+      "color": "green",
+      "confidence": 0.36,
+      "evidence": {
+        "data_quality": {
+          "usable": false,
+          "missing_fields": [
+            "timestamp"
+          ],
+          "data_warnings": [
+            "USGS gage height is 0.0 ft while flood stage is 20.0 ft, suggesting possible sensor failure or missing data.",
+            "USGS streamflow is 0 cfs, percentile rank is 0, and water_level_trend is 'unknown', indicating stale data.",
+            "Water services notes state 'No streamflow data available for this station,' yet streamflow_status is 'normal' and anomaly_level is 'low', which is contradictory.",
+            "Weather reports zero rain forecast and zero rain in the next 6 hours, which combined with zero streamflow raises concern about data validity."
+          ],
+          "confidence_modifier": 0.4
+        },
+        "hydrology": {
+          "hydrology_risk": "low",
+          "hydrology_evidence": [
+            "gage height 0.0 ft is far below flood stage 20.0 ft",
+            "streamflow is 0 cfs, percentile rank 0",
+            "anomaly level is low",
+            "data quality confidence modifier is 0.4 (low confidence)"
+          ],
+          "trend": "unknown",
+          "reasoning_summary": "The station shows no water present, with gage height zero and no streamflow, far below flood stage, indicating low hydrologic risk despite low data confidence."
+        },
+        "weather": {
+          "weather_risk": "low",
+          "weather_evidence": [
+            "rain_forecast_inches: 0.0",
+            "rain_next_6hr_inches: 0.0",
+            "storm_probability: 0.14",
+            "weather_alert: none"
+          ],
+          "alert_level": "none",
+          "reasoning_summary": "No precipitation expected, very low storm probability, and no active alerts indicate minimal flood risk."
+        }
+      },
+      "reasoning_summary": "Hydrology and weather analyses both indicate low flood risk (zero gage height, no streamflow, no precipitation expected). However, data quality is poor with missing timestamps and contradictory values, reducing confidence in the assessment.",
+      "recommended_action": "Continue routine monitoring, verify sensor functionality, and maintain standard flood preparedness measures while awaiting reliable data updates."
+    },
+    {
+      "area_id": "14305800",
+      "name": "SILETZ RIVER NEAR SILETZ, OR",
+      "center": {
+        "lat": 44.7646,
+        "lng": -123.9137972
+      },
+      "risk_level": "low",
+      "color": "green",
+      "confidence": 0.6,
       "evidence": {
         "data_quality": {
           "usable": true,
           "missing_fields": [],
-          "data_warnings": [],
-          "confidence_modifier": 1.0
+          "data_warnings": [
+            "USGS gage height is 0.0 ft, which may indicate missing or sensor failure",
+            "USGS streamflow is 0 cfs, suggesting no flow data",
+            "USGS water_level_trend is 'unknown', indicating stale or unavailable trend",
+            "Water services notes indicate 'No streamflow data available for this station', conflicting with USGS streamflow field",
+            "Rain forecast and 6hr rain are 0.0 inches, which may be plausible but verify"
+          ],
+          "confidence_modifier": 0.6
         },
         "hydrology": {
-          "hydrology_risk": "moderate",
+          "hydrology_risk": "low",
           "hydrology_evidence": [
-            "gage_height_ft: 9.8 (below flood_stage_ft: 12.0)",
-            "streamflow_percentile: 68 (above normal)",
-            "water_level_trend: rising",
-            "streamflow_status: above_normal with 40% above normal",
-            "anomaly_level: moderate"
+            "gage height 0.0 ft << flood stage 20.0 ft",
+            "streamflow 0 cfs (percentile 0%)",
+            "anomaly level low",
+            "data quality confidence modifier 0.6 reduces certainty"
           ],
-          "trend": "rising",
-          "reasoning_summary": "Current gage height is below flood stage but rising, with streamflow above normal (68th percentile, 40% above average) and a moderate anomaly, indicating elevated but not imminent flood risk."
+          "trend": "unknown",
+          "reasoning_summary": "The station shows no water present; gage height is far below flood stage, streamflow is zero and at the lowest percentile, anomaly level is low. Despite low confidence due to missing data, the overall hydrologic risk is low."
         },
         "weather": {
-          "weather_risk": "moderate",
+          "weather_risk": "low",
           "weather_evidence": [
-            "Flood watch issued",
-            "Total rain forecast 1.6 inches",
-            "Rain expected in next 6 hours 0.6 inches",
-            "Storm probability 45%",
-            "Forecast summary indicates coastal storm with moderate rainfall and elevated river levels"
+            "No active flood watch/warning (weather_alert: none)",
+            "Rain forecast total 0.0 inches",
+            "Rain expected in next 6 hours 0.0 inches",
+            "Storm probability 13% (low)"
           ],
-          "alert_level": "watch",
-          "reasoning_summary": "A flood watch is active, with moderate total rainfall forecast (1.6 inches) and a notable short-term rain amount (0.6 inches in 6 hours). Storm probability is 45%, indicating a significant chance of precipitation. Combined with elevated river levels mentioned in the forecast, the situation warrants moderate risk and a watch alert level."
+          "alert_level": "none",
+          "reasoning_summary": "Given the absence of any flood alerts, negligible rainfall forecasts, and low storm probability, the overall weather-related flood risk is low. The data quality confidence modifier of 0.6 indicates moderate confidence in the input data, but the risk assessment remains low."
         }
       },
-      "reasoning_summary": "Hydrology and weather assessments both indicate moderate flood risk: river stage is below flood stage but rising with above-normal streamflow, while a flood watch is active with moderate rainfall forecast and a 45% storm probability. The data are complete and reliable, leading to high confidence in the moderate risk rating.",
-      "recommended_action": "Continue monitoring river levels and weather updates; prepare for possible flooding by reviewing emergency plans, securing property in low-lying areas, and staying alert for any upgrade to a flood warning."
+      "reasoning_summary": "Both hydrology and weather assessments indicate low flood risk: gage height and streamflow are far below flood stage, no rainfall is forecast, and there are no active alerts. However, data quality issues (zero gage height and streamflow, possible sensor failure) reduce confidence in the measurements.",
+      "recommended_action": "Continue to monitor the station for data integrity; verify sensor functionality and seek alternative data sources. No immediate flood mitigation actions are required."
+    },
+    {
+      "area_id": "14306032",
+      "name": "BIG ELK CREEK NEAR ELK CITY, OR",
+      "center": {
+        "lat": 44.6037222,
+        "lng": -123.8520556
+      },
+      "risk_level": "low",
+      "color": "green",
+      "confidence": 0.8,
+      "evidence": {
+        "data_quality": {
+          "usable": true,
+          "missing_fields": [
+            "timestamp",
+            "location_latitude",
+            "location_longitude",
+            "data_source",
+            "last_updated"
+          ],
+          "data_warnings": [
+            "water_services notes indicate no streamflow data available, yet usgs provides streamflow_cfs and percentile_rank values, suggesting possible inconsistency or stale data."
+          ],
+          "confidence_modifier": 0.8
+        },
+        "hydrology": {
+          "hydrology_risk": "low",
+          "hydrology_evidence": [
+            "Gage height (0.0 ft) is far below flood stage (20.0 ft)",
+            "Streamflow is 0 cfs with percentile rank 0, indicating extremely low flow",
+            "Streamflow status is normal with anomaly level low",
+            "Water level trend is unknown due to lack of data"
+          ],
+          "trend": "unknown",
+          "reasoning_summary": "The station shows no water elevation near flood stage and minimal streamflow, indicating low hydrologic risk despite low data confidence."
+        },
+        "weather": {
+          "weather_risk": "low",
+          "weather_evidence": [
+            "rain_forecast_inches: 0.0",
+            "rain_next_6hr_inches: 0.0",
+            "storm_probability: 0.14 (14%)",
+            "weather_alert: none"
+          ],
+          "alert_level": "none",
+          "reasoning_summary": "No rainfall forecast, minimal storm probability, and no active flood alerts indicate minimal flood risk despite moderate data confidence."
+        }
+      },
+      "reasoning_summary": "Hydrology shows gage height far below flood stage and zero streamflow; weather indicates no rain forecast and minimal storm probability. Both sources agree on low flood risk, though data quality issues reduce confidence.",
+      "recommended_action": "Continue routine monitoring; no immediate mitigation actions required."
     }
   ],
   "environmental_risk_packets": [
     {
-      "area_id": "11490000",
-      "name": "Yaquina River at Newport, OR",
-      "river_name": "Yaquina River",
+      "area_id": "14305500",
+      "name": "SILETZ RIVER AT SILETZ, OR",
+      "river_name": "",
       "center": {
-        "lat": 44.6367,
-        "lng": -124.0535
+        "lat": 44.7151172,
+        "lng": -123.8873348
       },
       "raw_packet": {
         "usgs": {
-          "station_id": "11490000",
-          "gage_height_ft": 9.8,
-          "flood_stage_ft": 12.0,
-          "streamflow_cfs": 5600,
-          "percentile_rank": 68,
-          "water_level_trend": "rising"
+          "station_id": "14305500",
+          "gage_height_ft": 0.0,
+          "flood_stage_ft": 20.0,
+          "streamflow_cfs": 0,
+          "percentile_rank": 0,
+          "water_level_trend": "unknown"
         },
         "water_services": {
-          "station_id": "11490000",
-          "streamflow_status": "above_normal",
-          "percent_difference": 40,
-          "anomaly_level": "moderate",
-          "notes": "Coastal runoff and recent storms increasing flow in the Yaquina River near Newport."
+          "station_id": "14305500",
+          "streamflow_status": "normal",
+          "percent_difference": 0,
+          "anomaly_level": "low",
+          "notes": "No streamflow data available for this station."
         },
         "weather": {
-          "weather_alert": "flood_watch",
-          "rain_forecast_inches": 1.6,
-          "rain_next_6hr_inches": 0.6,
-          "storm_probability": 0.45,
-          "forecast_summary": "Coastal storm bringing moderate rainfall and elevated river levels."
+          "weather_alert": "none",
+          "rain_forecast_inches": 0.0,
+          "rain_next_6hr_inches": 0.0,
+          "storm_probability": 0.14,
+          "forecast_summary": "Areas of fog. Partly cloudy, with a low around 50. East southeast wind around 1 mph."
+        }
+      }
+    },
+    {
+      "area_id": "14305800",
+      "name": "SILETZ RIVER NEAR SILETZ, OR",
+      "river_name": "",
+      "center": {
+        "lat": 44.7646,
+        "lng": -123.9137972
+      },
+      "raw_packet": {
+        "usgs": {
+          "station_id": "14305800",
+          "gage_height_ft": 0.0,
+          "flood_stage_ft": 20.0,
+          "streamflow_cfs": 0,
+          "percentile_rank": 0,
+          "water_level_trend": "unknown"
+        },
+        "water_services": {
+          "station_id": "14305800",
+          "streamflow_status": "normal",
+          "percent_difference": 0,
+          "anomaly_level": "low",
+          "notes": "No streamflow data available for this station."
+        },
+        "weather": {
+          "weather_alert": "none",
+          "rain_forecast_inches": 0.0,
+          "rain_next_6hr_inches": 0.0,
+          "storm_probability": 0.13,
+          "forecast_summary": "Areas of fog. Partly cloudy, with a low around 50. Wind around 0 mph."
+        }
+      }
+    },
+    {
+      "area_id": "14306032",
+      "name": "BIG ELK CREEK NEAR ELK CITY, OR",
+      "river_name": "",
+      "center": {
+        "lat": 44.6037222,
+        "lng": -123.8520556
+      },
+      "raw_packet": {
+        "usgs": {
+          "station_id": "14306032",
+          "gage_height_ft": 0.0,
+          "flood_stage_ft": 20.0,
+          "streamflow_cfs": 0,
+          "percentile_rank": 0,
+          "water_level_trend": "unknown"
+        },
+        "water_services": {
+          "station_id": "14306032",
+          "streamflow_status": "normal",
+          "percent_difference": 0,
+          "anomaly_level": "low",
+          "notes": "No streamflow data available for this station."
+        },
+        "weather": {
+          "weather_alert": "none",
+          "rain_forecast_inches": 0.0,
+          "rain_next_6hr_inches": 0.0,
+          "storm_probability": 0.14,
+          "forecast_summary": "Areas of fog before 4am. Mostly clear, with a low around 50. East wind around 2 mph."
         }
       }
     }
   ],
-  "summary": "The Yaquina River at Newport",
-  "generated_at": "2026-05-02T23:53:46.027729+00:00"
+  "summary": "All monitored sites show low flood risk, requiring only routine monitoring and standard preparedness.",
+  "generated_at": "2026-05-03T06:23:13.372111+00:00"
 }

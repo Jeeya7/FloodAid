@@ -1,106 +1,141 @@
- {
-  "ranked_resources": [
-    {
-      "id": "hosp-001",
-      "overall_score": 0.9055,
-      "recommended": true,
-      "reasoning": "Highest overall score from excellent safety (0.84), high availability (0.9), and closest distance (0.56 miles). Open status ensures immediate access."
-    },
-    {
-      "id": "hosp-003",
-      "overall_score": 0.7584,
-      "recommended": false,
-      "reasoning": "Strong safety (0.59) and availability (0.7) with the nearest distance (0.35 miles), but slightly lower safety and availability than the top choice."
-    },
-    {
-      "id": "hosp-002",
-      "overall_score": 0.6150,
-      "recommended": false,
-      "reasoning": "Good distance (0.83 miles) but moderate safety (0.48) and lower availability (0.4) reduce its overall suitability."
-    },
-    {
-      "id": "food-002",
-      "overall_score": 0.4211,
-      "recommended": false,
-      "reasoning": "Reasonable distance (5.7 miles) and moderate safety (0.62), but low availability (0.2) and unknown status limit reliability."
-    },
-    {
-      "id": "food-001",
-      "overall_score": 0.3148,
-      "recommended": false,
-      "reasoning": "Farther distance (9.46 miles), low safety (0.38), and low availability (0.2) with unknown status make it a less favorable option."
-    },
-    {
-      "id": "food-003",
-      "overall_score": 0.0,
-      "recommended": false,
-      "reasoning": "Closed status results in a heavy penalty, rendering it unavailable despite any distance or safety considerations."
-    }
-  ],
-  "best_option_id": "hosp-001",
-  "summary": "The Samaritan Pacific Communities Hospital (hosp-001) is the best immediate resource due to its high safety, high availability, and proximity, all while being open and ready to help."
-}
 {
-  "recommended_resource": {
-    "id": "hosp-001",
-    "name": "Samaritan Pacific Communities Hospital",
-    "type": "hospital",
-    "lat": 44.638,
-    "lng": -124.052,
-    "distance_miles": 0.56,
-    "status": "open",
-    "reasoning": "Highest overall score from excellent safety (0.84), high availability (0.9), and closest distance (0.56 miles). Open status ensures immediate access."
-  },
-  "ranked_resources": [
-    {
-      "id": "hosp-001",
+  "recommended_resources": {
+    "hospital": {
+      "id": "463367491",
       "name": "Samaritan Pacific Communities Hospital",
       "type": "hospital",
-      "distance_miles": 0.56,
-      "overall_score": 0.9055,
-      "status": "open"
+      "lat": 44.6287918,
+      "lng": -124.0594538,
+      "distance_miles": 0.47,
+      "overall_score": 0.5,
+      "status": "open",
+      "reasoning": "Synthesis unavailable; ranked by fallback score."
     },
-    {
-      "id": "hosp-003",
-      "name": "Lincoln County Health Clinic",
-      "type": "hospital",
-      "distance_miles": 0.35,
-      "overall_score": 0.7584,
-      "status": "open"
-    },
-    {
-      "id": "hosp-002",
-      "name": "Newport Urgent Care Center",
-      "type": "hospital",
-      "distance_miles": 0.83,
-      "overall_score": 0.615,
-      "status": "open"
-    },
+    "shelter": null,
+    "food": {
+      "id": "food-002",
+      "name": "Toledo Food Pantry - Food Distribution Center",
+      "type": "food",
+      "lat": 44.6224694,
+      "lng": -123.934616,
+      "distance_miles": 5.7,
+      "overall_score": 0.5,
+      "status": "unknown",
+      "reasoning": "Synthesis unavailable; ranked by fallback score."
+    }
+  },
+  "ranked_resources": [
     {
       "id": "food-002",
       "name": "Toledo Food Pantry - Food Distribution Center",
       "type": "food",
+      "lat": 44.6224694,
+      "lng": -123.934616,
       "distance_miles": 5.7,
-      "overall_score": 0.4211,
-      "status": "unknown"
+      "overall_score": 0.5,
+      "status": "unknown",
+      "reasoning": "Synthesis unavailable; ranked by fallback score."
     },
     {
       "id": "food-001",
       "name": "USDA Food Distribution Center",
       "type": "food",
+      "lat": 44.7187348,
+      "lng": -123.9032574,
       "distance_miles": 9.46,
-      "overall_score": 0.3148,
-      "status": "unknown"
+      "overall_score": 0.5,
+      "status": "unknown",
+      "reasoning": "Synthesis unavailable; ranked by fallback score."
+    },
+    {
+      "id": "463367491",
+      "name": "Samaritan Pacific Communities Hospital",
+      "type": "hospital",
+      "lat": 44.6287918,
+      "lng": -124.0594538,
+      "distance_miles": 0.47,
+      "overall_score": 0.5,
+      "status": "open",
+      "reasoning": "Synthesis unavailable; ranked by fallback score."
+    },
+    {
+      "id": "1080968252",
+      "name": "Willamette Valley Cancer Institute and Research Center",
+      "type": "hospital",
+      "lat": 44.6521253,
+      "lng": -124.0537676,
+      "distance_miles": 1.54,
+      "overall_score": 0.5,
+      "status": "open",
+      "reasoning": "Synthesis unavailable; ranked by fallback score."
+    },
+    {
+      "id": "549829765",
+      "name": "Siletz Community Health Clinic",
+      "type": "hospital",
+      "lat": 44.7212341,
+      "lng": -123.9044247,
+      "distance_miles": 9.53,
+      "overall_score": 0.5,
+      "status": "open",
+      "reasoning": "Synthesis unavailable; ranked by fallback score."
+    },
+    {
+      "id": "6068831201",
+      "name": "Samaritan Depoe Bay Clinic",
+      "type": "hospital",
+      "lat": 44.8178984,
+      "lng": -124.0633858,
+      "distance_miles": 13.0,
+      "overall_score": 0.5,
+      "status": "open",
+      "reasoning": "Synthesis unavailable; ranked by fallback score."
+    },
+    {
+      "id": "1153934493",
+      "name": "Samaritan Waldport Clinic",
+      "type": "hospital",
+      "lat": 44.4164347,
+      "lng": -124.0760962,
+      "distance_miles": 14.81,
+      "overall_score": 0.5,
+      "status": "open",
+      "reasoning": "Synthesis unavailable; ranked by fallback score."
+    },
+    {
+      "id": "9191852835",
+      "name": "Adventist Health Urgent Care",
+      "type": "hospital",
+      "lat": 44.9592723,
+      "lng": -124.013516,
+      "distance_miles": 22.82,
+      "overall_score": 0.5,
+      "status": "open",
+      "reasoning": "Synthesis unavailable; ranked by fallback score."
+    },
+    {
+      "id": "389090581",
+      "name": "Samaritan Coastal Clinic",
+      "type": "hospital",
+      "lat": 44.9718029,
+      "lng": -124.014639,
+      "distance_miles": 23.68,
+      "overall_score": 0.5,
+      "status": "open",
+      "reasoning": "Synthesis unavailable; ranked by fallback score."
     },
     {
       "id": "food-003",
       "name": "Lincoln City Food Pantry",
       "type": "food",
+      "lat": 44.9717254,
+      "lng": -124.011925,
       "distance_miles": 23.68,
       "overall_score": 0.0,
-      "status": "closed"
+      "status": "closed",
+      "reasoning": "Synthesis unavailable; ranked by fallback score."
     }
   ],
-  "summary": "The Samaritan Pacific Communities Hospital (hosp-001) is the best immediate resource due to its high safety, high availability, and proximity, all while being open and ready to help.",
-  "generated_at": "2026-05-03T04:30:13.946931+00:00"
+  "summary": "Synthesis agent failed; resources ranked by fallback estimate.",
+  "generated_at": "2026-05-03T06:25:21.726163+00:00"
 }
