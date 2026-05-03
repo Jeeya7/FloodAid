@@ -1,10 +1,23 @@
+# risk_region_agent.py
+#
+# Multi-step flood-risk reasoning pipeline.
+#
+# Flow:
+#   1. Python calls the tools/services to collect raw environmental data.
+#   2. data_quality_agent  — checks data completeness and flags issues.
+#   3. hydrology_agent     — analyzes water-level, streamflow, and trend risk.
+#   4. weather_risk_agent  — analyzes rainfall, forecast, and alert risk.
+#   5. risk_synthesis_agent — combines all evidence into a final risk verdict.
+#   6. response_formatter_agent — shapes everything into frontend-ready JSON.
+#
+# LLM: NVIDIA via OpenRouter (one call per sub-agent, per region).
+# The LLM never calls external APIs — it only reasons over data Python fetched.
+
 import json
-from typing import Any, TypedDict
+from datetime import datetime, timezone
+from typing import Any
 
-from langchain_core.messages import HumanMessage, SystemMessage
-from langgraph.graph import END, START, StateGraph
-
-from llm import get_llm
+from openrouter_client import chat, parse_json_response
 from tools.risk_region_tools import (
     DEFAULT_BOUNDS,
     get_gauges_by_bounds_tool,
@@ -13,7 +26,8 @@ from tools.risk_region_tools import (
     get_weather_context_tool,
 )
 
-# Newport, Oregon — used when state["map_bounds"] is empty
+MAX_GAUGES = 3
+
 NEWPORT_BOUNDS = {
     "south": 44.55,
     "north": 44.75,
@@ -21,126 +35,286 @@ NEWPORT_BOUNDS = {
     "east": -123.80,
 }
 
-# Cap how many gauges we send to the LLM to stay inside free-tier token limits
-MAX_GAUGES = 3
+
+# ── Fallback templates (used when one LLM step fails) ────────────────────────
+
+def _fallback_data_quality() -> dict[str, Any]:
+    return {
+        "usable": True,
+        "missing_fields": [],
+        "data_warnings": ["Data quality check unavailable — using raw data as-is."],
+        "confidence_modifier": 0.7,
+    }
 
 
-class RiskState(TypedDict, total=False):
-    map_bounds: dict
-    environmental_risk_packets: list[dict]
-    risk_regions: list[dict]
-    debug_steps: list[str]
+def _fallback_hydrology() -> dict[str, Any]:
+    return {
+        "hydrology_risk": "moderate",
+        "hydrology_evidence": ["Hydrology analysis unavailable."],
+        "trend": "unknown",
+        "reasoning_summary": "Hydrology agent failed; defaulting to moderate risk.",
+    }
 
 
-# ── Nodes ────────────────────────────────────────────────────────────────────
+def _fallback_weather() -> dict[str, Any]:
+    return {
+        "weather_risk": "moderate",
+        "weather_evidence": ["Weather analysis unavailable."],
+        "alert_level": "none",
+        "reasoning_summary": "Weather agent failed; defaulting to moderate risk.",
+    }
 
-def collect_environmental_packets_node(state: RiskState) -> RiskState:
+
+def _fallback_synthesis(hydro: dict, weather: dict) -> dict[str, Any]:
+    # Pick the worse of the two available risk levels
+    order = ["low", "moderate", "high", "critical"]
+    level = max(
+        hydro.get("hydrology_risk", "moderate"),
+        weather.get("weather_risk", "moderate"),
+        key=lambda x: order.index(x) if x in order else 1,
+    )
+    return {
+        "risk_level": level,
+        "confidence": 0.5,
+        "reasoning_summary": "Synthesis agent failed; risk estimated from sub-agent outputs.",
+        "recommended_action": "Monitor conditions and follow local emergency guidance.",
+    }
+
+
+# ── Sub-agent functions ───────────────────────────────────────────────────────
+
+def data_quality_agent(raw_packet: dict[str, Any]) -> dict[str, Any]:
     """
-    Pure Python step — no LLM.
-    Calls the tools to gather USGS, streamflow, and weather data for each gauge,
-    then packages the results into environmental_risk_packets.
+    Inspect the raw USGS / Water Services / Weather data for completeness.
+    Returns a quality verdict the other agents use to weight their confidence.
+    """
+    system = (
+        "You are a data quality checker for a flood-safety system. "
+        "Examine the provided environmental data packet. "
+        "Identify missing, suspicious, or stale fields. "
+        "Return ONLY valid JSON matching this schema — no markdown:\n"
+        '{"usable":true,"missing_fields":[],"data_warnings":[],"confidence_modifier":1.0}'
+    )
+    user = f"Data packet:\n{json.dumps(raw_packet, separators=(',', ':'))}"
+
+    try:
+        raw = chat(system, user)
+        return parse_json_response(raw)
+    except Exception as exc:
+        return {**_fallback_data_quality(), "data_warnings": [f"Data quality check error: {exc}"]}
+
+
+def hydrology_agent(raw_packet: dict[str, Any], quality: dict[str, Any]) -> dict[str, Any]:
+    """
+    Analyze water-level, streamflow, discharge, and trends.
+    Uses the data quality modifier to adjust confidence.
+    """
+    system = (
+        "You are a hydrology risk analyst for a flood-safety system. "
+        "Analyze the USGS and water services data. Focus on: gage height vs flood stage, "
+        "streamflow percentile, water level trend, and anomaly level. "
+        "Return ONLY valid JSON — no markdown:\n"
+        '{"hydrology_risk":"low|moderate|high|critical",'
+        '"hydrology_evidence":[],"trend":"rising|stable|falling|unknown",'
+        '"reasoning_summary":"string"}'
+    )
+    user = (
+        f"USGS data: {json.dumps(raw_packet.get('usgs', {}), separators=(',', ':'))}\n"
+        f"Streamflow: {json.dumps(raw_packet.get('water_services', {}), separators=(',', ':'))}\n"
+        f"Data quality confidence modifier: {quality.get('confidence_modifier', 1.0)}"
+    )
+
+    try:
+        raw = chat(system, user)
+        return parse_json_response(raw)
+    except Exception as exc:
+        return {**_fallback_hydrology(), "hydrology_evidence": [f"Hydrology agent error: {exc}"]}
+
+
+def weather_risk_agent(raw_packet: dict[str, Any], quality: dict[str, Any]) -> dict[str, Any]:
+    """
+    Analyze rainfall forecasts, current precipitation, and NWS alerts.
+    """
+    system = (
+        "You are a weather risk analyst for a flood-safety system. "
+        "Analyze the weather forecast data. Focus on: active flood watch/warning, "
+        "rain forecast totals, short-term rainfall rate, and storm probability. "
+        "Return ONLY valid JSON — no markdown:\n"
+        '{"weather_risk":"low|moderate|high|critical",'
+        '"weather_evidence":[],"alert_level":"none|watch|warning|emergency",'
+        '"reasoning_summary":"string"}'
+    )
+    user = (
+        f"Weather data: {json.dumps(raw_packet.get('weather', {}), separators=(',', ':'))}\n"
+        f"Data quality confidence modifier: {quality.get('confidence_modifier', 1.0)}"
+    )
+
+    try:
+        raw = chat(system, user)
+        return parse_json_response(raw)
+    except Exception as exc:
+        return {**_fallback_weather(), "weather_evidence": [f"Weather agent error: {exc}"]}
+
+
+def risk_synthesis_agent(
+    gauge: dict[str, Any],
+    quality: dict[str, Any],
+    hydro: dict[str, Any],
+    weather: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    Combine data quality, hydrology risk, and weather risk into a final verdict.
+    """
+    system = (
+        "You are a flood risk synthesis analyst. "
+        "You will receive outputs from three specialist agents. "
+        "Combine the evidence and determine the final flood risk for this location. "
+        "Consider whether evidence sources agree or conflict. "
+        "Apply the confidence modifier from data quality. "
+        "Return ONLY valid JSON — no markdown:\n"
+        '{"risk_level":"low|moderate|high|critical","confidence":0.0,'
+        '"reasoning_summary":"string","recommended_action":"string"}'
+    )
+    user = (
+        f"Location: {gauge['name']} ({gauge['river_name']})\n"
+        f"Data quality: {json.dumps(quality, separators=(',', ':'))}\n"
+        f"Hydrology: {json.dumps(hydro, separators=(',', ':'))}\n"
+        f"Weather: {json.dumps(weather, separators=(',', ':'))}"
+    )
+
+    try:
+        raw = chat(system, user)
+        return parse_json_response(raw)
+    except Exception as exc:
+        result = _fallback_synthesis(hydro, weather)
+        result["reasoning_summary"] += f" (Synthesis error: {exc})"
+        return result
+
+
+def response_formatter_agent(
+    gauge: dict[str, Any],
+    quality: dict[str, Any],
+    hydro: dict[str, Any],
+    weather: dict[str, Any],
+    synthesis: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    Shape all agent outputs into the final frontend-ready region object.
+    Color mapping: low=green, moderate=yellow, high=orange, critical=red.
+    """
+    color_map = {"low": "green", "moderate": "yellow", "high": "orange", "critical": "red"}
+    risk_level = synthesis.get("risk_level", "moderate")
+
+    return {
+        "area_id": gauge["station_id"],
+        "name": gauge["name"],
+        "center": {"lat": gauge["lat"], "lng": gauge["lng"]},
+        "risk_level": risk_level,
+        "color": color_map.get(risk_level, "yellow"),
+        "confidence": synthesis.get("confidence", 0.5),
+        "evidence": {
+            "data_quality": quality,
+            "hydrology": hydro,
+            "weather": weather,
+        },
+        "reasoning_summary": synthesis.get("reasoning_summary", ""),
+        "recommended_action": synthesis.get("recommended_action", ""),
+    }
+
+
+# ── Main entry point ──────────────────────────────────────────────────────────
+
+def risk_region_agent(state: dict[str, Any]) -> dict[str, Any]:
+    """
+    Full multi-step flood risk pipeline.
+
+    1. Python fetches environmental data via tools (no LLM involvement).
+    2. Each sub-agent (LLM step) reasons over one slice of the data.
+    3. Synthesis combines all evidence into a final verdict per region.
+    4. Formatter produces the frontend-ready JSON.
     """
     bounds = state.get("map_bounds") or NEWPORT_BOUNDS
-    debug_steps = list(state.get("debug_steps", []))
+    debug_steps: list[str] = list(state.get("debug_steps", []))
 
+    # ── Step 1: collect raw data (Python, no LLM) ────────────────────────────
     gauges = get_gauges_by_bounds_tool.invoke({"bounds": bounds})
     gauges = gauges[:MAX_GAUGES]
+    debug_steps.append(f"Fetched {len(gauges)} gauges within bounds.")
 
-    packets: list[dict[str, Any]] = []
+    environmental_risk_packets: list[dict] = []
+    regions: list[dict] = []
 
     for gauge in gauges:
-        station_id = gauge["station_id"]
+        sid = gauge["station_id"]
+        raw_packet = {
+            "usgs":           get_usgs_water_data_tool.invoke({"station_id": sid}),
+            "water_services": get_streamflow_context_tool.invoke({"station_id": sid}),
+            "weather":        get_weather_context_tool.invoke({"lat": gauge["lat"], "lng": gauge["lng"]}),
+        }
 
-        usgs      = get_usgs_water_data_tool.invoke({"station_id": station_id})
-        streamflow = get_streamflow_context_tool.invoke({"station_id": station_id})
-        weather   = get_weather_context_tool.invoke({"lat": gauge["lat"], "lng": gauge["lng"]})
-
-        packets.append({
-            "area_id": station_id,
-            "name": gauge["name"],
+        # Store the full packet for transparency
+        environmental_risk_packets.append({
+            "area_id":    sid,
+            "name":       gauge["name"],
             "river_name": gauge["river_name"],
-            "center": {"lat": gauge["lat"], "lng": gauge["lng"]},
-            "raw_packet": {
-                "usgs": usgs,
-                "water_services": streamflow,
-                "weather": weather,
-            },
+            "center":     {"lat": gauge["lat"], "lng": gauge["lng"]},
+            "raw_packet": raw_packet,
         })
 
-    debug_steps.append(f"Collected environmental data for {len(packets)} gauges.")
+        debug_steps.append(f"Collected data for {gauge['name']}.")
+
+        # ── Steps 2–5: sub-agent reasoning (LLM calls) ───────────────────────
+        quality   = data_quality_agent(raw_packet)
+        debug_steps.append(f"  data_quality → usable={quality.get('usable')}, confidence={quality.get('confidence_modifier')}")
+
+        hydro     = hydrology_agent(raw_packet, quality)
+        debug_steps.append(f"  hydrology → risk={hydro.get('hydrology_risk')}, trend={hydro.get('trend')}")
+
+        weather   = weather_risk_agent(raw_packet, quality)
+        debug_steps.append(f"  weather → risk={weather.get('weather_risk')}, alert={weather.get('alert_level')}")
+
+        synthesis = risk_synthesis_agent(gauge, quality, hydro, weather)
+        debug_steps.append(f"  synthesis → final_risk={synthesis.get('risk_level')}, confidence={synthesis.get('confidence')}")
+
+        # ── Step 6: format ────────────────────────────────────────────────────
+        region = response_formatter_agent(gauge, quality, hydro, weather, synthesis)
+        regions.append(region)
+
+    # ── Build overall summary (single extra LLM call) ────────────────────────
+    summary = _build_summary(regions)
+    debug_steps.append("Generated overall summary.")
 
     return {
         **state,
-        "environmental_risk_packets": packets,
+        "regions": regions,
+        "environmental_risk_packets": environmental_risk_packets,
+        "summary": summary,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
         "debug_steps": debug_steps,
     }
 
 
-SYSTEM_PROMPT = (
-    "You are a flood risk analyst. "
-    "Analyze the environmental packets and return ONLY valid JSON with this shape:\n"
-    '{"environmental_risk_packets":[],"risk_regions":[],"debug_steps":[]}\n'
-    "Rules:\n"
-    "- Copy all input packets into environmental_risk_packets.\n"
-    "- risk_regions = only HIGH or MODERATE risk areas (omit LOW).\n"
-    "- high -> color red. moderate -> color yellow.\n"
-    "- Each region needs: area_id, name, river_name, risk_level, risk_score, "
-    "color, center, radius_miles=25, reasons (from actual data), "
-    'data_sources_used=["USGS","Water Services","Weather.gov"].\n'
-    "- No markdown. No text outside JSON."
-)
+def _build_summary(regions: list[dict]) -> str:
+    """Ask the LLM for a one-sentence overall flood situation summary."""
+    if not regions:
+        return "No flood risk regions were analyzed."
 
+    brief = [
+        {"name": r["name"], "risk": r["risk_level"], "action": r["recommended_action"]}
+        for r in regions
+    ]
+    system = (
+        "You are a flood safety communicator. "
+        "Write a single short sentence summarizing the overall flood situation across the listed regions. "
+        "Be calm and factual. Return only the sentence — no quotes, no markdown."
+    )
+    user = json.dumps(brief, separators=(",", ":"))
 
-def risk_analyzer_node(state: RiskState) -> RiskState:
-    """
-    Single LLM call — no tool loop, no bind_tools.
-    Passes the collected packets to Gemini and parses the JSON response.
-    """
-    packets = state.get("environmental_risk_packets", [])
-    debug_steps = list(state.get("debug_steps", []))
-
-    # Compact JSON keeps the prompt small (important for free-tier quota)
-    user_message = "Packets:\n" + json.dumps(packets, separators=(",", ":"))
-
-    response = get_llm().invoke([
-        SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=user_message),
-    ])
-
-    raw = response.content.strip()
-    if raw.startswith("```"):
-        raw = raw.removeprefix("```json").removeprefix("```").strip()
-        raw = raw.removesuffix("```").strip()
-
-    parsed = json.loads(raw)
-
-    # Merge debug steps produced by the LLM (if any) with our own
-    llm_debug = parsed.get("debug_steps", [])
-    debug_steps.append("Gemini analyzed packets and classified flood risk regions.")
-    debug_steps.extend(llm_debug)
-
-    return {
-        **state,
-        "environmental_risk_packets": parsed.get("environmental_risk_packets", packets),
-        "risk_regions": parsed.get("risk_regions", []),
-        "debug_steps": debug_steps,
-    }
-
-
-# ── Graph ─────────────────────────────────────────────────────────────────────
-
-def _build_graph():
-    g = StateGraph(RiskState)
-    g.add_node("collect_environmental_packets", collect_environmental_packets_node)
-    g.add_node("risk_analyzer_agent", risk_analyzer_node)
-    g.add_edge(START, "collect_environmental_packets")
-    g.add_edge("collect_environmental_packets", "risk_analyzer_agent")
-    g.add_edge("risk_analyzer_agent", END)
-    return g.compile()
-
-
-_risk_graph = _build_graph()
-
-
-def risk_region_agent(state: RiskState) -> RiskState:
-    return _risk_graph.invoke(state)
+    try:
+        return chat(system, user, max_tokens=80).strip()
+    except Exception:
+        high_count = sum(1 for r in regions if r["risk_level"] in ("high", "critical"))
+        return (
+            f"Analysis complete: {len(regions)} regions assessed, "
+            f"{high_count} with high or critical flood risk."
+        )
