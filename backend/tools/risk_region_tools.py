@@ -84,10 +84,10 @@ def create_bounds_tool(lat: float, lng: float, radius_miles: float = 25) -> dict
     lng_delta = radius_miles / (69.0 * math.cos(math.radians(lat)))
 
     bounds = {
-        "north": lat + lat_delta,
-        "south": lat - lat_delta,
-        "east": lng + lng_delta,
-        "west": lng - lng_delta,
+        "north": round(lat + lat_delta, 4),
+        "south": round(lat - lat_delta, 4),
+        "east": round(lng + lng_delta, 4),
+        "west": round(lng - lng_delta, 4),
     }
 
     return bounds
