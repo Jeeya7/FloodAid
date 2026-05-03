@@ -1,6 +1,6 @@
 {
-  "lat": 44.56684101689783,
-  "lang": -123.27891307614188,
+  "lat": 44.56684236774419,
+  "lang": -123.27890560693831,
   "raidus": 25.0,
   "regions": [
     {
@@ -18,14 +18,14 @@
           "usable": true,
           "missing_fields": [],
           "data_warnings": [
-            "Data quality check error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 275. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"}"
+            "Data quality check error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 39. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"}"
           ],
           "confidence_modifier": 0.7
         },
         "hydrology": {
           "hydrology_risk": "moderate",
           "hydrology_evidence": [
-            "Hydrology agent error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 235. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"}"
+            "Hydrology agent error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 39. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"}"
           ],
           "trend": "unknown",
           "reasoning_summary": "Hydrology agent failed; defaulting to moderate risk."
@@ -33,13 +33,13 @@
         "weather": {
           "weather_risk": "moderate",
           "weather_evidence": [
-            "Weather agent error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 470. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"}"
+            "Weather agent error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 79. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"}"
           ],
           "alert_level": "none",
           "reasoning_summary": "Weather agent failed; defaulting to moderate risk."
         }
       },
-      "reasoning_summary": "Synthesis agent failed; risk estimated from sub-agent outputs. (Synthesis error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 235. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"})",
+      "reasoning_summary": "Synthesis agent failed; risk estimated from sub-agent outputs. (Synthesis error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 39. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"})",
       "recommended_action": "Monitor conditions and follow local emergency guidance."
     },
     {
@@ -57,14 +57,14 @@
           "usable": true,
           "missing_fields": [],
           "data_warnings": [
-            "Data quality check error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 550. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"}"
+            "Data quality check error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 39. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"}"
           ],
           "confidence_modifier": 0.7
         },
         "hydrology": {
           "hydrology_risk": "moderate",
           "hydrology_evidence": [
-            "Hydrology agent error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 470. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"}"
+            "Hydrology agent error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 39. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"}"
           ],
           "trend": "unknown",
           "reasoning_summary": "Hydrology agent failed; defaulting to moderate risk."
@@ -72,13 +72,13 @@
         "weather": {
           "weather_risk": "moderate",
           "weather_evidence": [
-            "Weather agent error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 235. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"}"
+            "Weather agent error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 39. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"}"
           ],
           "alert_level": "none",
           "reasoning_summary": "Weather agent failed; defaulting to moderate risk."
         }
       },
-      "reasoning_summary": "Synthesis agent failed; risk estimated from sub-agent outputs. (Synthesis error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 235. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"})",
+      "reasoning_summary": "Synthesis agent failed; risk estimated from sub-agent outputs. (Synthesis error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 39. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"})",
       "recommended_action": "Monitor conditions and follow local emergency guidance."
     },
     {
@@ -96,14 +96,14 @@
           "usable": true,
           "missing_fields": [],
           "data_warnings": [
-            "Data quality check error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 275. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"}"
+            "Data quality check error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 39. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"}"
           ],
           "confidence_modifier": 0.7
         },
         "hydrology": {
           "hydrology_risk": "moderate",
           "hydrology_evidence": [
-            "Hydrology agent error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 235. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"}"
+            "Hydrology agent error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 39. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"}"
           ],
           "trend": "unknown",
           "reasoning_summary": "Hydrology agent failed; defaulting to moderate risk."
@@ -111,13 +111,13 @@
         "weather": {
           "weather_risk": "moderate",
           "weather_evidence": [
-            "Weather agent error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 235. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"}"
+            "Weather agent error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 39. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"}"
           ],
           "alert_level": "none",
           "reasoning_summary": "Weather agent failed; defaulting to moderate risk."
         }
       },
-      "reasoning_summary": "Synthesis agent failed; risk estimated from sub-agent outputs. (Synthesis error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 235. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"})",
+      "reasoning_summary": "Synthesis agent failed; risk estimated from sub-agent outputs. (Synthesis error: OpenRouter request failed: 402 Payment Required — {\"error\":{\"message\":\"This request requires more credits, or fewer max_tokens. You requested up to 2048 tokens, but can only afford 39. To increase, visit https://openrouter.ai/settings/credits and upgrade to a paid account\",\"code\":402,\"metadata\":{\"provider_name\":null}},\"user_id\":\"user_3DBp4XlfK2HBUMLpbuDMPBHHnpP\"})",
       "recommended_action": "Monitor conditions and follow local emergency guidance."
     }
   ],
@@ -170,7 +170,7 @@
           "rain_forecast_inches": 0.0,
           "rain_next_6hr_inches": 0.0,
           "storm_probability": 0.01,
-          "forecast_summary": "Sunny, with a high near 84. North wind 1 to 6 mph."
+          "forecast_summary": "Sunny, with a high near 84. North northeast wind 1 to 6 mph."
         }
       }
     },
@@ -201,6 +201,6 @@
       }
     }
   ],
-  "summary": "We need to output a single short sentence summarizing overall flood situation across listed regions, calm and factual. No quotes, no markdown. Just plain sentence.\n\nRegions: Willamette River at Harrisburg, OR; Long Tom River at Monroe, OR; Marys River above Woods Creek, near Philomath, OR. All risk moderate, action monitor conditions.\n\nSentence: \"Flood",
-  "generated_at": "2026-05-03T14:43:46.771824+00:00"
+  "summary": "Analysis complete: 3 regions assessed, 0 with high or critical flood risk.",
+  "generated_at": "2026-05-03T15:17:23.309699+00:00"
 }

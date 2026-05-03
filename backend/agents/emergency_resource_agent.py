@@ -56,6 +56,27 @@ def _fallback_analysis(resources: list[dict]) -> dict[str, Any]:
     }
 
 
+def _load_cached_response(cache_key: str) -> dict[str, Any] | None:
+    cached = _cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    try:
+        if not AGENT_RESPONSE_PATH.exists():
+            return None
+
+        with AGENT_RESPONSE_PATH.open("r", encoding="utf-8") as f:
+            payload = json.load(f)
+
+        if isinstance(payload, dict) and payload.get("cache_key") == cache_key:
+            _cache[cache_key] = payload
+            return payload
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    return None
+
+
 # ── Phase 1 — resource_collection_step ───────────────────────────────────────
 
 def resource_collection_step(lat: float, lng: float, radius_miles: float = 25) -> list[dict[str, Any]]:
@@ -276,15 +297,17 @@ def _save_agent_response(payload: dict[str, Any]) -> None:
 
 def emergency_resource_agent(lat: float, lng: float) -> dict[str, Any]:
     key = f"{round(lat, 2)},{round(lng, 2)}"
-    if key in _cache:
-        result = _cache[key]
-        _save_agent_response(result)
+    cached = _load_cached_response(key)
+    if cached is not None:
+        result = cached
         return result
 
     resources = resource_collection_step(lat, lng)
 
     if not resources:
         result = {
+            "cache_key":              key,
+            "requested_location":     {"lat": lat, "lng": lng},
             "recommended_resources": {"hospital": [], "shelter": [], "food": []},
             "ranked_resources":      [],
             "summary":               "No emergency resources found near this location.",
@@ -318,6 +341,8 @@ def emergency_resource_agent(lat: float, lng: float) -> dict[str, Any]:
         summary          = summary,
     )
 
+    result["cache_key"] = key
+    result["requested_location"] = {"lat": lat, "lng": lng}
     _save_agent_response(result)
     _cache[key] = result
     return result

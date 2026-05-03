@@ -28,10 +28,16 @@ class _MainShellState extends State<MainShell> {
   bool                  _loadingRisk      = true;
   String                _resourcesError   = '';
 
+  // Static: survives State recreation; resets on hot restart / process exit.
+  static bool _bootstrapped = false;
+
   @override
   void initState() {
     super.initState();
-    _bootstrap();
+    if (!_bootstrapped) {
+      _bootstrapped = true;
+      _bootstrap();
+    }
   }
 
   Future<void> _bootstrap() async {
@@ -61,46 +67,24 @@ class _MainShellState extends State<MainShell> {
   }
 
   Future<void> _loadResources(double lat, double lng, {bool forceRefresh = false}) async {
+    if (!forceRefresh && _resourcesData != null) return;
     if (!mounted) return;
-    setState(() {
-      _loadingResources = true;
-      _resourcesError   = '';
-    });
-
-    if (!forceRefresh) {
-      final cached = await AppCacheService().loadResources();
-      if (cached != null) {
-        if (!mounted) return;
-        setState(() {
-          _resourcesData    = cached;
-          _loadingResources = false;
-        });
-        return;
-      }
-    }
+    setState(() { _loadingResources = true; _resourcesError = ''; });
 
     try {
-      final response = await http.post(
-        Uri.parse('http://127.0.0.1:8000/api/resources'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'lat': lat, 'lng': lng, 'radius_miles': 25}),
-      ).timeout(const Duration(minutes: 3));
-
+      final data = await AppCacheService().getOrFetchResources(() async {
+        final res = await http.post(
+          Uri.parse('http://127.0.0.1:8000/api/resources'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'lat': lat, 'lng': lng, 'radius_miles': 25}),
+        ).timeout(const Duration(minutes: 3));
+        if (res.statusCode != 200) {
+          throw Exception('Status ${res.statusCode}');
+        }
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      });
       if (!mounted) return;
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        await AppCacheService().saveResources(data);
-        if (!mounted) return;
-        setState(() {
-          _resourcesData    = data;
-          _loadingResources = false;
-        });
-      } else {
-        setState(() {
-          _resourcesError   = 'Failed to load resources (${response.statusCode})';
-          _loadingResources = false;
-        });
-      }
+      setState(() { _resourcesData = data; _loadingResources = false; });
     } on TimeoutException {
       if (!mounted) return;
       setState(() {
@@ -109,52 +93,36 @@ class _MainShellState extends State<MainShell> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _resourcesError   = 'Error: $e';
-        _loadingResources = false;
-      });
+      setState(() { _resourcesError = 'Error: $e'; _loadingResources = false; });
     }
   }
 
   Future<void> _loadRisk(double lat, double lng) async {
-    final cached = await AppCacheService().loadRisk();
-    if (cached != null) {
-      if (!mounted) return;
-      setState(() {
-        _riskData    = cached;
-        _loadingRisk = false;
-      });
-      return;
-    }
+    if (_riskData != null) return;
 
     try {
-      final response = await http.post(
-        Uri.parse('http://127.0.0.1:8000/api/risk-regions'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'lat': lat, 'lng': lng, 'radius_miles': 25}),
-      );
+      final data = await AppCacheService().getOrFetchRisk(() async {
+        final res = await http.post(
+          Uri.parse('http://127.0.0.1:8000/api/risk-regions'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'lat': lat, 'lng': lng, 'radius_miles': 25}),
+        );
+        if (res.statusCode != 200) throw Exception('Status ${res.statusCode}');
+        return jsonDecode(res.body) as Map<String, dynamic>;
+      });
       if (!mounted) return;
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        await AppCacheService().saveRisk(data);
-        if (!mounted) return;
-        setState(() {
-          _riskData    = data;
-          _loadingRisk = false;
-        });
-      } else {
-        setState(() => _loadingRisk = false);
-      }
+      setState(() { _riskData = data; _loadingRisk = false; });
     } catch (e) {
       if (!mounted) return;
       setState(() => _loadingRisk = false);
-      debugPrint('Risk API error: $e');
+      debugPrint('Risk fetch error: $e');
     }
   }
 
   Future<void> _onRefreshResources() async {
     if (_userLocation == null) return;
     await AppCacheService().clearAll();
+    setState(() { _resourcesData = null; _riskData = null; });
     await Future.wait([
       _loadResources(_userLocation!.latitude, _userLocation!.longitude, forceRefresh: true),
       _loadRisk(_userLocation!.latitude, _userLocation!.longitude),

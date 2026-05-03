@@ -7,57 +7,46 @@
         "type": "hospital",
         "lat": 44.5627319,
         "lng": -123.2727889,
-        "distance_miles": 0.43,
-        "overall_score": 0.9573,
+        "distance_miles": 0.41,
+        "overall_score": 0.7175,
         "status": "open",
-        "reasoning": "It scored highly because it is open, very close (0.43 miles), and classified as a hospital."
+        "reasoning": "Analysis unavailable; using default scores."
       },
       {
-        "id": "126638106",
-        "name": "The Corvallis Clinic Walnut",
+        "id": "11234899385",
+        "name": "SamCare Express",
         "type": "hospital",
-        "lat": 44.5932357,
-        "lng": -123.2786125,
-        "distance_miles": 1.82,
-        "overall_score": 0.9487,
+        "lat": 44.5589843,
+        "lng": -123.2799884,
+        "distance_miles": 0.55,
+        "overall_score": 0.7166,
         "status": "open",
-        "reasoning": "Its high score reflects being open, relatively close (1.82 miles), and a hospital facility."
+        "reasoning": "Analysis unavailable; using default scores."
       },
       {
-        "id": "10783308189",
-        "name": "Corvallis Clinic Surgery Center",
+        "id": "305819282",
+        "name": "Samaritan Athletic Medicine Center",
         "type": "hospital",
-        "lat": 44.6017925,
-        "lng": -123.2554625,
-        "distance_miles": 2.67,
-        "overall_score": 0.9434,
+        "lat": 44.5593427,
+        "lng": -123.2842873,
+        "distance_miles": 0.58,
+        "overall_score": 0.7164,
         "status": "open",
-        "reasoning": "The score is high due to its open status, moderate distance (2.67 miles), and hospital category."
+        "reasoning": "Analysis unavailable; using default scores."
       }
     ],
     "shelter": [],
     "food": [
-      {
-        "id": "food-003",
-        "name": "Oregon Coast Emergency Food Bank",
-        "type": "food",
-        "lat": 44.629,
-        "lng": -124.06,
-        "distance_miles": 38.65,
-        "overall_score": 0.48,
-        "status": "open",
-        "reasoning": "The lower score stems from being open but far away (38.65 miles) and belonging to the food category."
-      },
       {
         "id": "food-002",
         "name": "Lincoln County Meal Site",
         "type": "food",
         "lat": 44.6412,
         "lng": -124.051,
-        "distance_miles": 38.31,
-        "overall_score": 0.4418,
+        "distance_miles": 38.33,
+        "overall_score": 0.4018,
         "status": "open",
-        "reasoning": "Its reduced score is due to open status combined with a large distance (38.31 miles) and food category weighting."
+        "reasoning": "Analysis unavailable; using default scores."
       },
       {
         "id": "food-001",
@@ -65,10 +54,21 @@
         "type": "food",
         "lat": 44.6368,
         "lng": -124.0535,
-        "distance_miles": 38.4,
-        "overall_score": 0.2813,
+        "distance_miles": 38.41,
+        "overall_score": 0.4013,
         "status": "open",
-        "reasoning": "The low score reflects being open yet distant (38.4 miles) and categorized as a food resource."
+        "reasoning": "Analysis unavailable; using default scores."
+      },
+      {
+        "id": "food-003",
+        "name": "Oregon Coast Emergency Food Bank",
+        "type": "food",
+        "lat": 44.629,
+        "lng": -124.06,
+        "distance_miles": 38.67,
+        "overall_score": 0.4,
+        "status": "open",
+        "reasoning": "Analysis unavailable; using default scores."
       }
     ]
   },
@@ -79,43 +79,10 @@
       "type": "hospital",
       "lat": 44.5627319,
       "lng": -123.2727889,
-      "distance_miles": 0.43,
-      "overall_score": 0.9573,
+      "distance_miles": 0.41,
+      "overall_score": 0.7175,
       "status": "open",
-      "reasoning": "It scored highly because it is open, very close (0.43 miles), and classified as a hospital."
-    },
-    {
-      "id": "126638106",
-      "name": "The Corvallis Clinic Walnut",
-      "type": "hospital",
-      "lat": 44.5932357,
-      "lng": -123.2786125,
-      "distance_miles": 1.82,
-      "overall_score": 0.9487,
-      "status": "open",
-      "reasoning": "Its high score reflects being open, relatively close (1.82 miles), and a hospital facility."
-    },
-    {
-      "id": "10783308189",
-      "name": "Corvallis Clinic Surgery Center",
-      "type": "hospital",
-      "lat": 44.6017925,
-      "lng": -123.2554625,
-      "distance_miles": 2.67,
-      "overall_score": 0.9434,
-      "status": "open",
-      "reasoning": "The score is high due to its open status, moderate distance (2.67 miles), and hospital category."
-    },
-    {
-      "id": "11477264006",
-      "name": "Samaritan Physical Rehabilitation Specialists - Corvallis",
-      "type": "hospital",
-      "lat": 44.5723682,
-      "lng": -123.263202,
-      "distance_miles": 0.87,
-      "overall_score": 0.9066,
-      "status": "open",
-      "reasoning": "It earned a strong score from being open, nearby (0.87 miles), and a hospital service."
+      "reasoning": "Analysis unavailable; using default scores."
     },
     {
       "id": "11234899385",
@@ -124,9 +91,9 @@
       "lat": 44.5589843,
       "lng": -123.2799884,
       "distance_miles": 0.55,
-      "overall_score": 0.7646,
+      "overall_score": 0.7166,
       "status": "open",
-      "reasoning": "The moderate score results from being open and close (0.55 miles) but lower than other hospitals due to its express clinic nature."
+      "reasoning": "Analysis unavailable; using default scores."
     },
     {
       "id": "305819282",
@@ -135,9 +102,9 @@
       "lat": 44.5593427,
       "lng": -123.2842873,
       "distance_miles": 0.58,
-      "overall_score": 0.7644,
+      "overall_score": 0.7164,
       "status": "open",
-      "reasoning": "Its score is moderate because it is open, close (0.58 miles), and a specialized hospital center."
+      "reasoning": "Analysis unavailable; using default scores."
     },
     {
       "id": "2453280127",
@@ -145,21 +112,43 @@
       "type": "hospital",
       "lat": 44.571437,
       "lng": -123.263891,
-      "distance_miles": 0.81,
-      "overall_score": 0.763,
+      "distance_miles": 0.8,
+      "overall_score": 0.715,
       "status": "open",
-      "reasoning": "The score is moderate as it is open, relatively close (0.81 miles), and a hospital pediatric service."
+      "reasoning": "Analysis unavailable; using default scores."
     },
     {
-      "id": "food-003",
-      "name": "Oregon Coast Emergency Food Bank",
-      "type": "food",
-      "lat": 44.629,
-      "lng": -124.06,
-      "distance_miles": 38.65,
-      "overall_score": 0.48,
+      "id": "11477264006",
+      "name": "Samaritan Physical Rehabilitation Specialists - Corvallis",
+      "type": "hospital",
+      "lat": 44.5723682,
+      "lng": -123.263202,
+      "distance_miles": 0.86,
+      "overall_score": 0.7147,
       "status": "open",
-      "reasoning": "The lower score stems from being open but far away (38.65 miles) and belonging to the food category."
+      "reasoning": "Analysis unavailable; using default scores."
+    },
+    {
+      "id": "126638106",
+      "name": "The Corvallis Clinic Walnut",
+      "type": "hospital",
+      "lat": 44.5932357,
+      "lng": -123.2786125,
+      "distance_miles": 1.82,
+      "overall_score": 0.7087,
+      "status": "open",
+      "reasoning": "Analysis unavailable; using default scores."
+    },
+    {
+      "id": "10783308189",
+      "name": "Corvallis Clinic Surgery Center",
+      "type": "hospital",
+      "lat": 44.6017925,
+      "lng": -123.2554625,
+      "distance_miles": 2.68,
+      "overall_score": 0.7034,
+      "status": "open",
+      "reasoning": "Analysis unavailable; using default scores."
     },
     {
       "id": "food-002",
@@ -167,10 +156,10 @@
       "type": "food",
       "lat": 44.6412,
       "lng": -124.051,
-      "distance_miles": 38.31,
-      "overall_score": 0.4418,
+      "distance_miles": 38.33,
+      "overall_score": 0.4018,
       "status": "open",
-      "reasoning": "Its reduced score is due to open status combined with a large distance (38.31 miles) and food category weighting."
+      "reasoning": "Analysis unavailable; using default scores."
     },
     {
       "id": "food-001",
@@ -178,12 +167,28 @@
       "type": "food",
       "lat": 44.6368,
       "lng": -124.0535,
-      "distance_miles": 38.4,
-      "overall_score": 0.2813,
+      "distance_miles": 38.41,
+      "overall_score": 0.4013,
       "status": "open",
-      "reasoning": "The low score reflects being open yet distant (38.4 miles) and categorized as a food resource."
+      "reasoning": "Analysis unavailable; using default scores."
+    },
+    {
+      "id": "food-003",
+      "name": "Oregon Coast Emergency Food Bank",
+      "type": "food",
+      "lat": 44.629,
+      "lng": -124.06,
+      "distance_miles": 38.67,
+      "overall_score": 0.4,
+      "status": "open",
+      "reasoning": "Analysis unavailable; using default scores."
     }
   ],
-  "summary": "Resources received higher scores when they were open, nearby, and classified as hospitals, while distant food sites scored lower.",
-  "generated_at": "2026-05-03T08:03:20.872594+00:00"
+  "summary": "Resources ranked by estimated suitability.",
+  "generated_at": "2026-05-03T15:17:26.422122+00:00",
+  "cache_key": "44.57,-123.28",
+  "requested_location": {
+    "lat": 44.56684236774419,
+    "lng": -123.27890560693831
+  }
 }
