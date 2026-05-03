@@ -1,81 +1,18 @@
 # weather_service.py
-# Simulates calls to the National Weather Service (NWS) API.
-# In production, replace mock data with real HTTP requests to:
-#   https://api.weather.gov/
+# Calls the real National Weather Service (NWS) API.
+# https://api.weather.gov/
+# No API key needed — just requires a User-Agent header.
 
+import urllib.request
+import json
 from typing import Any
 
-# Mock weather context keyed by approximate location label.
-# We bucket stations by a rough lat/lng key so lookups stay simple.
-# Each entry mirrors the shape of a real NWS point-forecast response.
-_MOCK_WEATHER: list[dict[str, Any]] = [
-    # Missouri River at Kansas City area
-    {
-        "_lat_center": 39.1,
-        "_lng_center": -94.6,
-        "_radius_deg": 2.0,
-        "weather_alert": "flood_warning",
-        "rain_forecast_inches": 3.2,
-        "rain_next_6hr_inches": 1.1,
-        "storm_probability": 0.85,
-        "forecast_summary": "Severe thunderstorm system moving northeast; flash flooding imminent.",
-    },
-    # Mississippi River at Memphis area
-    {
-        "_lat_center": 35.1,
-        "_lng_center": -90.0,
-        "_radius_deg": 2.0,
-        "weather_alert": "flood_watch",
-        "rain_forecast_inches": 2.2,
-        "rain_next_6hr_inches": 0.8,
-        "storm_probability": 0.65,
-        "forecast_summary": "Slow-moving low-pressure system; widespread heavy rain expected.",
-    },
-    # Sacramento River area
-    {
-        "_lat_center": 38.6,
-        "_lng_center": -121.5,
-        "_radius_deg": 2.0,
-        "weather_alert": "flood_watch",
-        "rain_forecast_inches": 1.8,
-        "rain_next_6hr_inches": 0.5,
-        "storm_probability": 0.55,
-        "forecast_summary": "Atmospheric river event approaching the Central Valley.",
-    },
-    # Ohio River at Cincinnati area
-    {
-        "_lat_center": 39.1,
-        "_lng_center": -84.5,
-        "_radius_deg": 2.0,
-        "weather_alert": "flood_watch",
-        "rain_forecast_inches": 2.1,
-        "rain_next_6hr_inches": 0.6,
-        "storm_probability": 0.60,
-        "forecast_summary": "Active spring weather pattern; multiple rounds of heavy rain possible.",
-    },
-    # Colorado River near Grand Canyon — dry / normal
-    {
-        "_lat_center": 36.1,
-        "_lng_center": -112.0,
-        "_radius_deg": 2.0,
-        "weather_alert": "none",
-        "rain_forecast_inches": 0.3,
-        "rain_next_6hr_inches": 0.0,
-        "storm_probability": 0.10,
-        "forecast_summary": "Clear and dry conditions expected for the next 48 hours.",
-    },
-    # Yaquina River / Newport, OR — coastal moderate rain
-    {
-        "_lat_center": 44.6367,
-        "_lng_center": -124.0535,
-        "_radius_deg": 1.0,
-        "weather_alert": "flood_watch",
-        "rain_forecast_inches": 1.6,
-        "rain_next_6hr_inches": 0.6,
-        "storm_probability": 0.45,
-        "forecast_summary": "Coastal storm bringing moderate rainfall and elevated river levels.",
-    },
-]
+NWS_BASE = "https://api.weather.gov"
+
+_HEADERS = {
+    "User-Agent": "FloodAid/1.0 (floodaid@beaverhacks.com)",
+    "Accept": "application/geo+json",
+}
 
 _DEFAULT_WEATHER: dict[str, Any] = {
     "weather_alert": "none",
@@ -86,30 +23,80 @@ _DEFAULT_WEATHER: dict[str, Any] = {
 }
 
 
-def _distance_deg(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    """Rough Euclidean distance in degrees — good enough for mock bucketing."""
-    return ((lat1 - lat2) ** 2 + (lng1 - lng2) ** 2) ** 0.5
+def _get(url: str) -> dict[str, Any]:
+    req = urllib.request.Request(url, headers=_HEADERS)
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return json.loads(resp.read().decode("utf-8"))
 
 
 def get_weather_context(lat: float, lng: float) -> dict[str, Any]:
     """
-    Return weather forecast and alert context for a lat/lng location.
-
-    In production this would call:
-      GET https://api.weather.gov/points/{lat},{lng}  →  then fetch the forecast URL
-    For now, we return the nearest mock entry within its radius.
+    Fetches real NWS weather data for a lat/lng.
+    Called by the agent with the location it already has.
+    Returns a dict with the same keys as the old mock data.
     """
-    best_match = None
-    best_dist = float("inf")
+    try:
+        # Step 1 — get alerts
+        alerts_data = _get(f"{NWS_BASE}/alerts/active?point={lat},{lng}")
+        features = alerts_data.get("features", [])
 
-    for entry in _MOCK_WEATHER:
-        dist = _distance_deg(lat, lng, entry["_lat_center"], entry["_lng_center"])
-        if dist < entry["_radius_deg"] and dist < best_dist:
-            best_dist = dist
-            best_match = entry
+        priority = {
+            "flash flood warning": "flood_warning",
+            "flood warning":       "flood_warning",
+            "flash flood watch":   "flood_watch",
+            "flood watch":         "flood_watch",
+            "flood advisory":      "flood_advisory",
+        }
 
-    if best_match is None:
+        weather_alert = "none"
+        for feature in features:
+            event = feature.get("properties", {}).get("event", "").lower()
+            for key, value in priority.items():
+                if key in event:
+                    weather_alert = value
+                    break
+
+        # Step 2 — get grid URLs for this location
+        points = _get(f"{NWS_BASE}/points/{lat},{lng}")
+        props = points.get("properties", {})
+        hourly_url = props.get("forecastHourly")
+        forecast_url = props.get("forecast")
+
+        # Step 3 — hourly rain probabilities
+        storm_probability = 0.0
+        rain_next_6hr_inches = 0.0
+        rain_forecast_inches = 0.0
+
+        if hourly_url:
+            hourly = _get(hourly_url)
+            periods = hourly.get("properties", {}).get("periods", [])
+            for i, period in enumerate(periods[:24]):
+                prob = (period.get("probabilityOfPrecipitation") or {}).get("value") or 0
+                if i < 6:
+                    storm_probability = max(storm_probability, prob / 100)
+                    if prob > 50:
+                        rain_next_6hr_inches += 0.1
+                if prob > 50:
+                    rain_forecast_inches += 0.1
+
+        # Step 4 — plain language summary
+        forecast_summary = "No summary available."
+        if forecast_url:
+            daily = _get(forecast_url)
+            daily_periods = daily.get("properties", {}).get("periods", [])
+            if daily_periods:
+                forecast_summary = daily_periods[0].get("detailedForecast", "No summary available.")
+
+        return {
+            "weather_alert":        weather_alert,
+            "rain_forecast_inches": round(rain_forecast_inches, 1),
+            "rain_next_6hr_inches": round(rain_next_6hr_inches, 1),
+            "storm_probability":    round(storm_probability, 2),
+            "forecast_summary":     forecast_summary,
+        }
+
+    except Exception as e:
+        print(f"[weather_service] Failed for ({lat}, {lng}): {e}")
         return _DEFAULT_WEATHER.copy()
-
-    # Strip internal bucketing keys before returning
-    return {k: v for k, v in best_match.items() if not k.startswith("_")}
+    
+  
