@@ -20,6 +20,11 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
+  // Demo mode uses Newport, OR coords instead of GPS
+  bool _demoMode = false;
+  static const _newportLat = 44.6368;
+  static const _newportLng = -124.0535;
+
   // Shared app data — fetched once, passed to all screens
   LatLng?               _userLocation;
   Map<String, dynamic>? _resourcesData;
@@ -41,29 +46,57 @@ class _MainShellState extends State<MainShell> {
   }
 
   Future<void> _bootstrap() async {
-    try {
-      LocationPermission perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.denied) {
-        perm = await Geolocator.requestPermission();
-      }
-      final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-      if (!mounted) return;
-      setState(() => _userLocation = LatLng(pos.latitude, pos.longitude));
+    double lat, lng;
 
-      // Fire both fetches simultaneously — each checks cache first
-      await Future.wait([
-        _loadResources(pos.latitude, pos.longitude),
-        _loadRisk(pos.latitude, pos.longitude),
-      ]);
-    } catch (_) {
+    if (_demoMode) {
+      lat = _newportLat;
+      lng = _newportLng;
       if (!mounted) return;
-      setState(() {
-        _loadingResources = false;
-        _loadingRisk      = false;
-      });
+      setState(() => _userLocation = const LatLng(_newportLat, _newportLng));
+    } else {
+      try {
+        LocationPermission perm = await Geolocator.checkPermission();
+        if (perm == LocationPermission.denied) {
+          perm = await Geolocator.requestPermission();
+        }
+        final pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high,
+        );
+        lat = pos.latitude;
+        lng = pos.longitude;
+        if (!mounted) return;
+        setState(() => _userLocation = LatLng(lat, lng));
+      } catch (_) {
+        if (!mounted) return;
+        setState(() {
+          _loadingResources = false;
+          _loadingRisk      = false;
+        });
+        return;
+      }
     }
+
+    await Future.wait([
+      _loadResources(lat, lng),
+      _loadRisk(lat, lng),
+    ]);
+  }
+
+  Future<void> _toggleDemoMode() async {
+    final next = !_demoMode;
+    // Clear all state and cache before switching so modes never mix
+    await AppCacheService().clearAll();
+    _bootstrapped = false;
+    setState(() {
+      _demoMode         = next;
+      _resourcesData    = null;
+      _riskData         = null;
+      _userLocation     = null;
+      _loadingResources = true;
+      _loadingRisk      = true;
+      _resourcesError   = '';
+    });
+    _bootstrap();
   }
 
   Future<void> _loadResources(double lat, double lng, {bool forceRefresh = false}) async {
@@ -132,6 +165,32 @@ class _MainShellState extends State<MainShell> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0C3566),
+        foregroundColor: Colors.white,
+        title: Text(const ['FloodAid', 'Chat', 'Emergency Resources'][_currentIndex]),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: TextButton.icon(
+              onPressed: _toggleDemoMode,
+              icon: Icon(
+                _demoMode ? Icons.explore : Icons.explore_off,
+                color: _demoMode ? Colors.amber : Colors.white54,
+                size: 18,
+              ),
+              label: Text(
+                _demoMode ? 'Demo' : 'Live',
+                style: TextStyle(
+                  color: _demoMode ? Colors.amber : Colors.white54,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
       body: IndexedStack(
         index: _currentIndex,
         children: [
@@ -140,6 +199,7 @@ class _MainShellState extends State<MainShell> {
             resourcesData: _resourcesData,
             riskData:      _riskData,
             loading:       _loadingRisk || _loadingResources,
+            demoMode:      _demoMode,
           ),
           const ChatScreen(),
           ResourcesScreen(

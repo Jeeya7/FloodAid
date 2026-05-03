@@ -7,13 +7,15 @@ class MapScreen extends StatefulWidget {
   final Map<String, dynamic>? resourcesData;
   final Map<String, dynamic>? riskData;
   final bool                  loading;
+  final bool                  demoMode;
 
   const MapScreen({
     super.key,
     this.userLocation,
     this.resourcesData,
     this.riskData,
-    this.loading = true,
+    this.loading  = true,
+    this.demoMode = false,
   });
 
   @override
@@ -118,11 +120,6 @@ class _MapScreenState extends State<MapScreen> {
     final markers = _buildResourceMarkers();
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('FloodAid'),
-        backgroundColor: const Color(0xFF0C3566),
-        foregroundColor: Colors.white,
-      ),
       body: Stack(
         children: [
           FlutterMap(

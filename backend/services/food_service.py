@@ -25,47 +25,59 @@ GOOGLE_PLACES_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/jso
 _TIMEOUT = 10
 
 
-_MOCK_FOOD_RESOURCES = [
+# Small offsets (in degrees) used to scatter mock resources around the request point.
+# ~0.01° lat ≈ 0.7 mi,  ~0.01° lng ≈ 0.5 mi at mid-latitudes.
+_MOCK_OFFSETS = [
+    {"dlat":  0.004, "dlng":  0.006},  # ~0.4 mi NE
+    {"dlat":  0.007, "dlng": -0.005},  # ~0.6 mi NW
+    {"dlat": -0.011, "dlng":  0.003},  # ~0.8 mi S
+]
+
+_MOCK_FOOD_TEMPLATES = [
     {
         "id": "food-001",
-        "name": "Newport Community Food Pantry",
+        "name": "Community Food Pantry",
         "type": "pantry",
-        "lat": 44.6368,
-        "lng": -124.0535,
-        "address": "432 NW Coast St, Newport, OR 97365",
-        "distance_miles": 0.4,
         "status": "open",
         "opening_hours": {"open_now": True},
         "phone": "541-555-0101",
-        "notes": "Mock data. Open Mon–Fri 9am–5pm.",
+        "notes": "Mock data – Google Places key not configured.",
     },
     {
         "id": "food-002",
-        "name": "Lincoln County Meal Site",
+        "name": "County Emergency Meal Site",
         "type": "meal_site",
-        "lat": 44.6412,
-        "lng": -124.0510,
-        "address": "118 SE Benton St, Newport, OR 97365",
-        "distance_miles": 0.7,
         "status": "open",
         "opening_hours": {"open_now": True},
         "phone": "541-555-0202",
-        "notes": "Mock data. Hot meals served daily.",
+        "notes": "Mock data – Google Places key not configured.",
     },
     {
         "id": "food-003",
-        "name": "Oregon Coast Emergency Food Bank",
+        "name": "Regional Emergency Food Bank",
         "type": "food_bank",
-        "lat": 44.6290,
-        "lng": -124.0600,
-        "address": "750 SW Coos Ave, Newport, OR 97365",
-        "distance_miles": 1.2,
         "status": "open",
         "opening_hours": {"open_now": True},
         "phone": "541-555-0303",
-        "notes": "Mock data. Emergency food distribution site.",
+        "notes": "Mock data – Google Places key not configured.",
     },
 ]
+
+
+def _build_mock_resources(lat: float, lng: float) -> list[dict]:
+    """Generate mock food resources scattered around the requested location."""
+    resources = []
+    for template, offset in zip(_MOCK_FOOD_TEMPLATES, _MOCK_OFFSETS):
+        r_lat = round(lat + offset["dlat"], 6)
+        r_lng = round(lng + offset["dlng"], 6)
+        resources.append({
+            **template,
+            "lat":            r_lat,
+            "lng":            r_lng,
+            "address":        f"Near {round(lat, 3)}, {round(lng, 3)}",
+            "distance_miles": round(_distance_miles(lat, lng, r_lat, r_lng), 2),
+        })
+    return resources
 
 
 def _distance_miles(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
@@ -201,13 +213,12 @@ def _normalize_google_place(
     }
 
 
-def _mock_response(reason: str) -> dict[str, Any]:
-    """Return clearly labelled mock data."""
-
+def _mock_response(lat: float, lng: float, reason: str) -> dict[str, Any]:
+    """Return mock data placed near the requested coordinates."""
     return {
         "source": "mock_food_api",
         "using_mock_data": True,
-        "resources": _MOCK_FOOD_RESOURCES,
+        "resources": _build_mock_resources(lat, lng),
         "error": reason,
     }
 
@@ -229,10 +240,10 @@ def get_food_resources(
     """
 
     if not _REQUESTS_AVAILABLE:
-        return _mock_response("requests library not installed")
+        return _mock_response(lat, lng, "requests library not installed")
 
     if not GOOGLE_PLACES_API_KEY:
-        return _mock_response("GOOGLE_PLACES_API_KEY missing from .env")
+        return _mock_response(lat, lng, "GOOGLE_PLACES_API_KEY missing from .env")
 
     try:
         radius_meters = int(min(radius_miles, 25) * 1609.34)
@@ -254,7 +265,7 @@ def get_food_resources(
         data = response.json()
 
         if data.get("status") not in {"OK", "ZERO_RESULTS"}:
-            return _mock_response(f"Google Places error: {data.get('status')}")
+            return _mock_response(lat, lng, f"Google Places error: {data.get('status')}")
 
         raw_places = data.get("results", [])
 
@@ -263,7 +274,7 @@ def get_food_resources(
         ]
 
         if not filtered_places:
-            return _mock_response("Google Places returned no food assistance resources")
+            return _mock_response(lat, lng, "Google Places returned no food assistance resources")
 
         resources = [
             _normalize_google_place(place, index, lat, lng)
@@ -280,4 +291,4 @@ def get_food_resources(
         }
 
     except Exception as exc:
-        return _mock_response(str(exc))
+        return _mock_response(lat, lng, str(exc))

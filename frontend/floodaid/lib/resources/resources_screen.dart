@@ -157,11 +157,6 @@ class ResourcesScreen extends StatelessWidget {
     final hasAny = _recommended.values.any((list) => list.isNotEmpty);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Emergency Resources'),
-        backgroundColor: const Color(0xFF0C3566),
-        foregroundColor: Colors.white,
-      ),
       body: loading
           ? const Center(
               child: Column(
