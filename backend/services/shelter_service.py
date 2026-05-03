@@ -1,150 +1,152 @@
 # shelter_service.py
-# Fetches emergency shelter resources near a location.
-# In production, replace the placeholder URL with a real API such as:
-#   - FEMA Disaster Recovery Centers API (https://www.fema.gov/api)
-#   - American Red Cross shelter finder  (https://www.redcross.org/get-help/disaster-relief-and-recovery-services/find-an-open-shelter.html)
-#   - 211 API                            (https://api.211.org)
+# Fetches emergency shelter resources using the Red Cross Open Shelter API.
+# https://www.redcross.org/get-help/disaster-relief-and-recovery-services/find-an-open-shelter.html
 
+import urllib.request
+import urllib.parse
+import json
+import math
 from typing import Any
 
-try:
-    import requests
-    _REQUESTS_AVAILABLE = True
-except ImportError:
-    _REQUESTS_AVAILABLE = False
+# Red Cross shelter API — no key required
+REDCROSS_API_URL = "https://api.redcross.org/v2/shelters"
 
-# TODO: Replace with the real shelter API endpoint when available
-SHELTER_API_URL = "https://xyz.example.com/shelters"
+_TIMEOUT = 10
 
-_TIMEOUT = 10  # seconds
-
-
-# ── Mock data ─────────────────────────────────────────────────────────────────
-# Returned when the real API is unreachable.
-# Source is clearly labelled "mock_shelter_api" so callers know it is not live data.
-
-_MOCK_SHELTER_RESOURCES = [
-    {
-        "id": "shelter-001",
-        "name": "Newport High School Evacuation Shelter",
-        "type": "evacuation_shelter",
-        "lat": 44.6350,
-        "lng": -124.0545,
-        "address": "322 NE Fogarty St, Newport, OR 97365",
-        "distance_miles": 0.5,
-        "status": "open",
-        "capacity": 350,
-        "phone": "541-555-0501",
-        "notes": "ADA accessible. Pets allowed in designated area. Activated by Lincoln County Emergency Management.",
-    },
-    {
-        "id": "shelter-002",
-        "name": "Lincoln Events Center Emergency Shelter",
-        "type": "evacuation_shelter",
-        "lat": 44.6445,
-        "lng": -124.0500,
-        "address": "33 NE 2nd St, Newport, OR 97365",
-        "distance_miles": 0.8,
-        "status": "open",
-        "capacity": 500,
-        "phone": "541-555-0502",
-        "notes": "Large-capacity venue. Red Cross managed. Cots, meals, and medical station available.",
-    },
-    {
-        "id": "shelter-003",
-        "name": "Coastal Community Warming Center",
-        "type": "warming_center",
-        "lat": 44.6300,
-        "lng": -124.0580,
-        "address": "612 SE Marine Science Dr, Newport, OR 97365",
-        "distance_miles": 1.1,
-        "status": "open",
-        "capacity": 80,
-        "phone": "541-555-0503",
-        "notes": "Overnight warming center. No pets. Open 6pm–8am during active weather events.",
-    },
-    {
-        "id": "shelter-004",
-        "name": "Bayfront Temporary Shelter",
-        "type": "temporary_shelter",
-        "lat": 44.6275,
-        "lng": -124.0610,
-        "address": "150 SW Bay Blvd, Newport, OR 97365",
-        "distance_miles": 1.5,
-        "status": "closed",
-        "capacity": 120,
-        "phone": "541-555-0504",
-        "notes": "Currently closed. Will open if county issues a flood emergency declaration.",
-    },
-]
+_HEADERS = {
+    "User-Agent": "FloodAid/1.0 (floodaid@beaverhacks.com)",
+    "Accept": "application/json",
+}
 
 
-# ── Normalizer ────────────────────────────────────────────────────────────────
+def _distance_miles(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
+    """Haversine distance in miles."""
+    R = 3958.8
+    lat1, lng1, lat2, lng2 = map(math.radians, [lat1, lng1, lat2, lng2])
+    dlat = lat2 - lat1
+    dlng = lng2 - lng1
+    a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlng/2)**2
+    return R * 2 * math.asin(math.sqrt(a))
 
-def _normalize_resource(raw: dict[str, Any]) -> dict[str, Any]:
-    """Map one raw API item to the standard shelter resource schema."""
-    valid_types = {"evacuation_shelter", "warming_center", "temporary_shelter"}
-    raw_type = str(raw.get("type", "")).lower().replace(" ", "_")
 
-    # capacity can be None/null when not reported by the API
-    raw_capacity = raw.get("capacity")
-    capacity = int(raw_capacity) if raw_capacity is not None else None
+def _normalize(raw: dict[str, Any], user_lat: float, user_lng: float) -> dict[str, Any]:
+    shelter_lat = float(raw.get("latitude", 0.0))
+    shelter_lng = float(raw.get("longitude", 0.0))
 
     return {
         "id":             str(raw.get("id", "unknown")),
         "name":           str(raw.get("name", "Unknown Shelter")),
-        "type":           raw_type if raw_type in valid_types else "unknown",
-        "lat":            float(raw.get("lat", 0.0)),
-        "lng":            float(raw.get("lng", 0.0)),
+        "type":           "evacuation_shelter",
+        "lat":            shelter_lat,
+        "lng":            shelter_lng,
         "address":        str(raw.get("address", "")),
-        "distance_miles": float(raw.get("distance_miles", 0.0)),
-        "status":         raw.get("status") if raw.get("status") in ("open", "closed") else "unknown",
-        "capacity":       capacity,
+        "distance_miles": round(_distance_miles(user_lat, user_lng, shelter_lat, shelter_lng), 1),
+        "status":         "open" if raw.get("isOpen", False) else "closed",
+        "capacity":       raw.get("capacity"),
         "phone":          str(raw.get("phone", "")),
         "notes":          str(raw.get("notes", "")),
     }
 
 
-# ── Public function ───────────────────────────────────────────────────────────
+def _try_redcross(lat: float, lng: float, radius_miles: float) -> list[dict[str, Any]]:
+    """Try Red Cross API."""
+    params = urllib.parse.urlencode({
+        "lat":    lat,
+        "lng":    lng,
+        "radius": radius_miles,
+    })
+    url = REDCROSS_API_URL + "?" + params
+    req = urllib.request.Request(url, headers=_HEADERS)
+    with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    raw_list = data.get("shelters", data.get("results", []))
+    return [_normalize(r, lat, lng) for r in raw_list]
+
+
+def _try_fema(lat: float, lng: float, radius_miles: float) -> list[dict[str, Any]]:
+    """Try FEMA Disaster Shelter API."""
+    deg_offset = radius_miles / 69.0
+    filter_str = (
+        f"latitude gt {round(lat - deg_offset, 4)} and "
+        f"latitude lt {round(lat + deg_offset, 4)} and "
+        f"longitude gt {round(lng - deg_offset, 4)} and "
+        f"longitude lt {round(lng + deg_offset, 4)}"
+    )
+    params = urllib.parse.urlencode({
+        "$filter":  filter_str,
+        "$orderby": "shelterName asc",
+        "$top":     "20",
+        "$format":  "json",
+    })
+    url = "https://www.fema.gov/api/open/v2/disasterShelters?" + params
+    req = urllib.request.Request(url, headers=_HEADERS)
+    with urllib.request.urlopen(req, timeout=_TIMEOUT) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    raw_list = data.get("disasterShelters", [])
+
+    def normalize_fema(raw: dict) -> dict:
+        shelter_lat = float(raw.get("latitude", 0.0))
+        shelter_lng = float(raw.get("longitude", 0.0))
+        return {
+            "id":             str(raw.get("id", "unknown")),
+            "name":           str(raw.get("shelterName", "Unknown Shelter")),
+            "type":           "evacuation_shelter",
+            "lat":            shelter_lat,
+            "lng":            shelter_lng,
+            "address":        f"{raw.get('address1', '')} {raw.get('city', '')} {raw.get('state', '')} {raw.get('zip', '')}".strip(),
+            "distance_miles": round(_distance_miles(lat, lng, shelter_lat, shelter_lng), 1),
+            "status":         "open" if raw.get("shelterStatus", "").lower() == "open" else "closed",
+            "capacity":       raw.get("maximumCapacity"),
+            "phone":          str(raw.get("phone", "")),
+            "notes":          str(raw.get("specialNeeds", "")),
+        }
+
+    return [normalize_fema(r) for r in raw_list]
+
 
 def get_shelters(
     lat: float,
     lng: float,
-    radius_miles: float = 10,
+    radius_miles: float = 25,
 ) -> dict[str, Any]:
     """
     Return emergency shelter resources near the given coordinates.
-
-    In production this calls:
-      GET SHELTER_API_URL?lat=<lat>&lng=<lng>&radius=<radius_miles>
-
-    Falls back to mock data if the request fails or requests is unavailable.
+    Tries Red Cross API first, falls back to FEMA API.
+    Called by the agent with the lat/lng it already has.
     """
-    if not _REQUESTS_AVAILABLE:
-        return {
-            "source": "mock_shelter_api",
-            "resources": _MOCK_SHELTER_RESOURCES,
-            "error": "requests library not installed; using mock data.",
-        }
-
+    # Try Red Cross first
     try:
-        response = requests.get(
-            SHELTER_API_URL,
-            params={"lat": lat, "lng": lng, "radius": radius_miles},
-            timeout=_TIMEOUT,
-        )
-        response.raise_for_status()
-        # TODO: Adjust the key below to match the real API's response envelope
-        raw_list: list[dict] = response.json().get("resources", response.json())
+        resources = _try_redcross(lat, lng, radius_miles)
+        resources.sort(key=lambda x: x["distance_miles"])
         return {
-            "source": "shelter_api",
-            "resources": [_normalize_resource(r) for r in raw_list],
+            "source":    "redcross_api",
+            "count":     len(resources),
+            "resources": resources,
         }
+    except Exception as e:
+        print(f"[shelter_service] Red Cross API failed: {e} — trying FEMA")
 
-    except Exception as exc:
-        # Placeholder endpoint is not live yet — return labelled mock data
+    # Fall back to FEMA
+    try:
+        resources = _try_fema(lat, lng, radius_miles)
+        resources.sort(key=lambda x: x["distance_miles"])
         return {
-            "source": "mock_shelter_api",
-            "resources": _MOCK_SHELTER_RESOURCES,
-            "error": str(exc),
+            "source":    "fema_api",
+            "count":     len(resources),
+            "resources": resources,
         }
+    except Exception as e:
+        print(f"[shelter_service] FEMA API also failed: {e}")
+        raise RuntimeError(f"All shelter APIs failed: {e}")
+
+
+if __name__ == "__main__":
+    lat, lng = 45.8918, -123.9615
+    print(f"Testing shelters for Cannon Beach, OR ({lat}, {lng})\n")
+
+    result = get_shelters(lat, lng, radius_miles=25)
+    print(json.dumps(result, indent=2))
+
+    with open("cannon_beach_shelters.json", "w") as f:
+        json.dump(result, f, indent=2)
+    print(f"\nFound {result['count']} shelters. Saved to cannon_beach_shelters.json")
