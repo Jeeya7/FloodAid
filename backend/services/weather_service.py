@@ -98,5 +98,3 @@ def get_weather_context(lat: float, lng: float) -> dict[str, Any]:
     except Exception as e:
         print(f"[weather_service] Failed for ({lat}, {lng}): {e}")
         return _DEFAULT_WEATHER.copy()
-    
-  
