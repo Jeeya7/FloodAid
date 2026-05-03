@@ -42,12 +42,23 @@ frontend/flutter/bin/cache/
 frontend/**/.dart_tool/
 frontend/**/build/
 
-# Native builds
+# Native builds (ephemeral directories)
 frontend/floodaid/.android/
 frontend/floodaid/.ios/
 frontend/floodaid/windows/flutter/ephemeral/
 frontend/floodaid/macos/Flutter/ephemeral/
 frontend/floodaid/linux/flutter/ephemeral/
+
+# ─── Generated / Auto-generated Files ────────────────────────────────────────
+# Flutter/Dart plugin registration files (platform-specific, auto-generated)
+**/generated_plugin_registrant.*
+**/GeneratedPluginRegistrant.*
+**/generated_plugins.cmake
+dartpad/web_plugin_registrant.dart
+
+# Backend agent responses (generated at runtime)
+backend/agent_response/
+agent_response/
 
 # ─── Dependencies ────────────────────────────────────────────────────────────
 node_modules/
@@ -57,13 +68,13 @@ out/
 # ─── IDE & Editor ────────────────────────────────────────────────────────────
 .vscode/
 .idea/
+.gradle/
 *.swp
 *.swo
 *~
-.DS_Store
-Thumbs.db
-*.sublime-project
-*.sublime-workspace
+*.iml
+*.ipr
+*.iws
 .project
 .classpath
 .c9/
@@ -71,20 +82,9 @@ Thumbs.db
 .settings/
 *.sublime-project
 *.sublime-workspace
-
-# ─── IDE Specific ────────────────────────────────────────────────────────────
-# VS Code
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-
-# IntelliJ / Android Studio
-.idea/
-.gradle/
-*.iml
-local.properties
+.atom/
+.svn/
+.swiftpm/
 
 # ─── Logs ────────────────────────────────────────────────────────────────────
 *.log
@@ -95,13 +95,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# ─── Temporary Files ─────────────────────────────────────────────────────────
+# ─── OS / Temporary Files ────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 *.tmp
 *.temp
 .env.local
 .env.*.local
-
-# Agent Response
-agent_response/*
