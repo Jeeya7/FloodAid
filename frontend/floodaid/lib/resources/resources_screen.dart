@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import '../services/app_cache_service.dart';
 
 class ResourcesScreen extends StatefulWidget {
   const ResourcesScreen({super.key});
@@ -28,6 +29,17 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
     _fetchResources();
   }
 
+  void _applyData(Map<String, dynamic> data) {
+    final rec = data['recommended_resources'] ?? {};
+    _recommended = {
+      'hospital': List<dynamic>.from(rec['hospital'] ?? []),
+      'shelter':  List<dynamic>.from(rec['shelter']  ?? []),
+      'food':     List<dynamic>.from(rec['food']     ?? []),
+    };
+    _ranked  = List<dynamic>.from(data['ranked_resources'] ?? []);
+    _loading = false;
+  }
+
   Future<void> _fetchResources({bool forceRefresh = false}) async {
     if (_hasFetched && !forceRefresh) return;
     _hasFetched = true;
@@ -36,6 +48,15 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
       _loading = true;
       _error = '';
     });
+
+    // Cache hit — no network call needed
+    if (!forceRefresh) {
+      final cached = await AppCacheService().loadResources();
+      if (cached != null) {
+        setState(() => _applyData(cached));
+        return;
+      }
+    }
 
     try {
       LocationPermission permission = await Geolocator.checkPermission();
@@ -58,17 +79,9 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
       ).timeout(const Duration(minutes: 3));
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final rec = data['recommended_resources'] ?? {};
-        setState(() {
-          _recommended = {
-            'hospital': List<dynamic>.from(rec['hospital'] ?? []),
-            'shelter':  List<dynamic>.from(rec['shelter']  ?? []),
-            'food':     List<dynamic>.from(rec['food']     ?? []),
-          };
-          _ranked  = List<dynamic>.from(data['ranked_resources'] ?? []);
-          _loading = false;
-        });
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        await AppCacheService().saveResources(data);
+        setState(() => _applyData(data));
       } else {
         setState(() {
           _error   = 'Failed to load resources (${response.statusCode})';
@@ -77,15 +90,15 @@ class _ResourcesScreenState extends State<ResourcesScreen> {
       }
     } on TimeoutException {
       setState(() {
-        _error   = 'Still analyzing resources — please try again in a moment.';
-        _loading = false;
-        _hasFetched = false; // allow retry
+        _error      = 'Still analyzing resources — please try again in a moment.';
+        _loading    = false;
+        _hasFetched = false;
       });
     } catch (e) {
       setState(() {
-        _error   = 'Error: $e';
-        _loading = false;
-        _hasFetched = false; // allow retry
+        _error      = 'Error: $e';
+        _loading    = false;
+        _hasFetched = false;
       });
     }
   }

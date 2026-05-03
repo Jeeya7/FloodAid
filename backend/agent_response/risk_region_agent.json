@@ -1,6 +1,6 @@
 {
-  "lat": 44.56696701672331,
-  "lang": -123.27916814580692,
+  "lat": 44.5668404652158,
+  "lang": -123.2789109411145,
   "raidus": 25.0,
   "regions": [
     {
@@ -12,45 +12,41 @@
       },
       "risk_level": "low",
       "color": "green",
-      "confidence": 0.63,
+      "confidence": 0.9,
       "evidence": {
         "data_quality": {
           "usable": true,
-          "missing_fields": [
-            "observation_time",
-            "latitude",
-            "longitude"
-          ],
+          "missing_fields": [],
           "data_warnings": [
-            "USGS sensor readings are zero for gage height, streamflow, and percentile rank, indicating possible sensor failure or stale data."
+            "No timestamp provided; data may be stale."
           ],
-          "confidence_modifier": 0.7
+          "confidence_modifier": 0.9
         },
         "hydrology": {
           "hydrology_risk": "low",
           "hydrology_evidence": [
-            "gage height 0.0 ft well below flood stage 20.0 ft",
-            "streamflow 0 cfs, percentile rank 0 indicating extremely low flow",
-            "water level trend unknown",
-            "data quality confidence modifier 0.7 reduces certainty"
+            "Gage height (2.4 ft) is far below flood stage (20.0 ft)",
+            "Streamflow percentile rank is 6.7%, indicating very low flow",
+            "Water level trend is falling"
           ],
-          "trend": "unknown",
-          "reasoning_summary": "Current gage height is far below flood stage, streamflow is negligible, and percentile rank indicates extremely low flow conditions, leading to low hydrologic risk despite unknown trend and moderate data confidence."
+          "trend": "falling",
+          "reasoning_summary": "Current gage height is only 12% of flood stage, streamflow is in the lowest percentile, and the water level is decreasing, indicating minimal flood risk."
         },
         "weather": {
           "weather_risk": "low",
           "weather_evidence": [
-            "No rain forecast (0.0 in)",
-            "Negligible short-term rain (0.0 in next 6 hr)",
-            "Very low storm probability (2%)",
-            "No active flood watch/warning"
+            "weather_alert: none",
+            "rain_forecast_inches: 0.0",
+            "rain_next_6hr_inches: 0.0",
+            "storm_probability: 0.01 (1%)",
+            "forecast_summary indicates patchy fog then sunny, no precipitation"
           ],
           "alert_level": "none",
-          "reasoning_summary": "Given the absence of forecasted rain, minimal short-term precipitation, low storm probability, and no flood alerts, the flood risk is assessed as low."
+          "reasoning_summary": "No active flood watch/warning, negligible rainfall forecast and extremely low storm probability indicate minimal flood risk; data quality confidence is high (0.9) supporting low risk assessment."
         }
       },
-      "reasoning_summary": "Hydrology and weather assessments both indicate low flood risk: gage height is far below flood stage, streamflow is negligible, and no rain is forecast. Data quality issues reduce confidence, but the agreement between sources supports a low risk conclusion.",
-      "recommended_action": "Continue routine monitoring; no immediate mitigation actions required."
+      "reasoning_summary": "Hydrology shows gage height far below flood stage, very low streamflow percentile, and falling trend. Weather indicates no alerts, negligible rainfall forecast, and minimal storm probability. Both sources agree on low flood risk; data quality confidence modifier of 0.9 supports this assessment.",
+      "recommended_action": "No immediate flood mitigation actions required; continue routine monitoring for any changes in conditions."
     },
     {
       "area_id": "14170000",
@@ -61,33 +57,44 @@
       },
       "risk_level": "low",
       "color": "green",
-      "confidence": 0.5,
+      "confidence": 0.9,
       "evidence": {
         "data_quality": {
           "usable": true,
-          "missing_fields": [],
-          "data_warnings": [],
-          "confidence_modifier": 1.0
+          "missing_fields": [
+            "usgs.timestamp",
+            "weather.timestamp"
+          ],
+          "data_warnings": [
+            "No timestamp provided; cannot assess data freshness."
+          ],
+          "confidence_modifier": 0.9
         },
         "hydrology": {
           "hydrology_risk": "low",
           "hydrology_evidence": [
-            "gage height 0.0 ft is well below flood stage of 20.0 ft",
-            "streamflow is 0 cfs, indicating no flow",
-            "percentile rank is 0%, indicating extremely low flow relative to historical data"
+            "gage height 4.48 ft is well below flood stage of 20.0 ft",
+            "streamflow percentile rank 6.7% indicates very low flow",
+            "water level trend is steady"
           ],
-          "trend": "unknown",
-          "reasoning_summary": "The gage height is far below flood stage, streamflow is zero, and percentile rank is minimal, indicating negligible flood risk; however, the water level trend is unknown due to lack of trend data."
+          "trend": "stable",
+          "reasoning_summary": "The gage height is far below flood stage, streamflow is in the lowest percentile, and the water level is steady, indicating minimal flood risk."
         },
         "weather": {
           "weather_risk": "low",
-          "weather_evidence": [],
+          "weather_evidence": [
+            "rain_forecast_inches: 0.0",
+            "rain_next_6hr_inches: 0.0",
+            "storm_probability: 0.01 (1%)",
+            "weather_alert: none",
+            "forecast_summary: Sunny, with a high near 84. North wind 1 to 6 mph."
+          ],
           "alert_level": "none",
-          "reasoning_summary": "No active alerts, negligible rainfall forecast (0.0 in total and 0.0 in next 6 hr), and very low storm probability (2%). Conditions are mostly clear, indicating minimal flood risk."
+          "reasoning_summary": "No measurable rain expected, minimal storm probability, and clear skies indicate negligible flood risk."
         }
       },
-      "reasoning_summary": "Synthesis agent failed; risk estimated from sub-agent outputs. (Synthesis error: Expecting value: line 1 column 1 (char 0))",
-      "recommended_action": "Monitor conditions and follow local emergency guidance."
+      "reasoning_summary": "Hydrology shows gage height far below flood stage, very low streamflow percentile, and steady trend. Weather indicates no rain expected, minimal storm probability, and clear skies. Together these indicate negligible flood risk.",
+      "recommended_action": "No immediate action required; continue routine monitoring."
     },
     {
       "area_id": "14170350",
@@ -98,47 +105,45 @@
       },
       "risk_level": "low",
       "color": "green",
-      "confidence": 0.72,
+      "confidence": 0.8,
       "evidence": {
         "data_quality": {
           "usable": true,
           "missing_fields": [
-            "timestamp",
-            "last_updated"
+            "observation_timestamp",
+            "forecast_timestamp"
           ],
           "data_warnings": [
-            "gage_height_ft is 0.0 while flood_stage_ft is 20.0, suggesting possible sensor issue or missing data",
-            "streamflow_cfs is 0, indicating no flow which may be unrealistic",
-            "percentile_rank is 0, indicating lowest possible rank which may indicate stale data",
-            "water_level_trend is unknown",
-            "forecast summary indicates wind around 0 mph, which is questionable"
+            "Gage height is 0.0 ft while flood stage is 20.0 ft and percentile rank is 50.0, which may be inconsistent.",
+            "Streamflow is 0 cfs despite gage height zero; verify sensor functionality."
           ],
           "confidence_modifier": 0.8
         },
         "hydrology": {
           "hydrology_risk": "low",
           "hydrology_evidence": [
-            "gage height 0.0 ft is far below flood stage of 20.0 ft",
-            "streamflow is 0 cfs with percentile rank 0 indicating extremely low flow",
-            "water level trend is unknown"
+            "gage height (0.0 ft) is far below flood stage (20.0 ft)",
+            "streamflow is 0 cfs",
+            "streamflow percentile rank is 50.0 (median)",
+            "data quality confidence modifier is 0.8"
           ],
           "trend": "unknown",
-          "reasoning_summary": "The gage height is significantly lower than the flood stage, streamflow is at zero and in the lowest percentile, indicating minimal flood risk despite unknown trend and moderate data confidence."
+          "reasoning_summary": "The gage height is significantly lower than the flood stage, streamflow is negligible, and the percentile rank indicates median conditions, leading to a low hydrology risk assessment."
         },
         "weather": {
           "weather_risk": "low",
           "weather_evidence": [
-            "No active flood watch/warning",
-            "Rain forecast total: 0.0 inches",
-            "Rain forecast next 6 hours: 0.0 inches",
-            "Storm probability: 2%"
+            "No active weather alerts",
+            "Rain forecast: 0.0 inches",
+            "Rain expected in next 6 hours: 0.0 inches",
+            "Storm probability: 1%"
           ],
           "alert_level": "none",
-          "reasoning_summary": "With no precipitation expected and very low storm probability, flood risk is minimal."
+          "reasoning_summary": "With no precipitation expected, negligible storm probability, and no active alerts, the flood risk is low despite a moderate confidence in the data."
         }
       },
-      "reasoning_summary": "Hydrology and weather assessments both indicate low flood risk: gage height is far below flood stage, streamflow is negligible, and no precipitation is expected. Despite data quality issues (missing timestamps, questionable sensor readings), the agreement between sources supports a low risk conclusion.",
-      "recommended_action": "Continue routine monitoring; no immediate flood mitigation actions required."
+      "reasoning_summary": "Hydrology shows gage height far below flood stage, negligible streamflow, and median percentile; weather indicates no precipitation expected, no alerts, and minimal storm probability. Combined evidence points to low flood risk.",
+      "recommended_action": "Continue routine monitoring; no immediate mitigation actions required."
     }
   ],
   "environmental_risk_packets": [
@@ -153,18 +158,18 @@
       "raw_packet": {
         "usgs": {
           "station_id": "14166000",
-          "gage_height_ft": 0.0,
+          "gage_height_ft": 2.4,
           "flood_stage_ft": 20.0,
-          "streamflow_cfs": 0,
-          "percentile_rank": 0,
-          "water_level_trend": "unknown"
+          "streamflow_cfs": 5230,
+          "percentile_rank": 6.7,
+          "water_level_trend": "falling"
         },
         "weather": {
           "weather_alert": "none",
           "rain_forecast_inches": 0.0,
           "rain_next_6hr_inches": 0.0,
-          "storm_probability": 0.02,
-          "forecast_summary": "Patchy fog after 3am. Mostly clear, with a low around 49. North northwest wind around 2 mph."
+          "storm_probability": 0.01,
+          "forecast_summary": "Patchy fog before 9am. Sunny, with a high near 84. North northwest wind 1 to 7 mph."
         }
       }
     },
@@ -179,18 +184,18 @@
       "raw_packet": {
         "usgs": {
           "station_id": "14170000",
-          "gage_height_ft": 0.0,
+          "gage_height_ft": 4.48,
           "flood_stage_ft": 20.0,
-          "streamflow_cfs": 0,
-          "percentile_rank": 0,
-          "water_level_trend": "unknown"
+          "streamflow_cfs": 131,
+          "percentile_rank": 6.7,
+          "water_level_trend": "steady"
         },
         "weather": {
           "weather_alert": "none",
           "rain_forecast_inches": 0.0,
           "rain_next_6hr_inches": 0.0,
-          "storm_probability": 0.02,
-          "forecast_summary": "Mostly clear, with a low around 51. Northwest wind around 2 mph."
+          "storm_probability": 0.01,
+          "forecast_summary": "Sunny, with a high near 84. North wind 1 to 6 mph."
         }
       }
     },
@@ -208,19 +213,19 @@
           "gage_height_ft": 0.0,
           "flood_stage_ft": 20.0,
           "streamflow_cfs": 0,
-          "percentile_rank": 0,
+          "percentile_rank": 50.0,
           "water_level_trend": "unknown"
         },
         "weather": {
           "weather_alert": "none",
           "rain_forecast_inches": 0.0,
           "rain_next_6hr_inches": 0.0,
-          "storm_probability": 0.02,
-          "forecast_summary": "Mostly clear, with a low around 52. Wind around 0 mph."
+          "storm_probability": 0.01,
+          "forecast_summary": "Sunny. High near 86, with temperatures falling to around 84 in the afternoon. North northeast wind 0 to 3 mph."
         }
       }
     }
   ],
-  "summary": "We need to produce a single short sentence summarizing overall flood situation across listed regions. Calm and factual. No quotes, no markdown. Just plain sentence.\n\nRegions: Willamette River at Harrisburg, OR low; Long Tom River at Monroe, OR low; Marys River above Woods Creek, near Philomath, OR low. So overall: Flood risk remains low across these Oregon",
-  "generated_at": "2026-05-03T07:59:16.596539+00:00"
+  "summary": "All three rivers currently show low flood risk, requiring only routine monitoring with no immediate mitigation",
+  "generated_at": "2026-05-03T14:22:50.838648+00:00"
 }

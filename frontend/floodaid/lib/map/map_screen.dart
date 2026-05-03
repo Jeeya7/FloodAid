@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import '../services/app_cache_service.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
@@ -53,7 +54,46 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  void _applyRiskScore(int score) {
+    if (score >= 70) {
+      _riskLevel = 'high';
+    } else if (score >= 40) {
+      _riskLevel = 'moderate';
+    } else {
+      _riskLevel = 'low';
+    }
+  }
+
+  List<Marker> _buildMarkers(List resources) {
+    return resources.map<Marker>((r) {
+      final type = r['type'] ?? 'shelter';
+      return Marker(
+        point: LatLng(
+          (r['lat'] as num).toDouble(),
+          (r['lng'] as num).toDouble(),
+        ),
+        width: 36,
+        height: 36,
+        child: Tooltip(
+          message: r['name'] ?? type,
+          child: Icon(
+            _iconForType(type),
+            color: _colorForType(type),
+            size: 30,
+          ),
+        ),
+      );
+    }).toList();
+  }
+
   Future<void> _fetchRisk(double lat, double lng) async {
+    // Cache hit
+    final cached = await AppCacheService().loadRisk();
+    if (cached != null) {
+      setState(() => _applyRiskScore((cached['risk_score'] as num?)?.toInt() ?? 0));
+      return;
+    }
+
     try {
       final response = await http.post(
         Uri.parse('http://localhost:8000/api/risk-regions'),
@@ -61,24 +101,24 @@ class _MapScreenState extends State<MapScreen> {
         body: jsonEncode({'lat': lat, 'lng': lng, 'radius_miles': 25}),
       );
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final score = data['risk_score'] ?? 0;
-        setState(() {
-          if (score >= 70) {
-            _riskLevel = 'high';
-          } else if (score >= 40) {
-            _riskLevel = 'moderate';
-          } else {
-            _riskLevel = 'low';
-          }
-        });
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        await AppCacheService().saveRisk(data);
+        setState(() => _applyRiskScore((data['risk_score'] as num?)?.toInt() ?? 0));
       }
     } catch (e) {
-      print('Risk API error: $e');
+      debugPrint('Risk API error: $e');
     }
   }
 
   Future<void> _fetchResources(double lat, double lng) async {
+    // Cache hit — ranked_resources is the flat list used for map markers
+    final cached = await AppCacheService().loadResources();
+    if (cached != null) {
+      final List resources = cached['ranked_resources'] ?? [];
+      setState(() => _resourceMarkers = _buildMarkers(resources));
+      return;
+    }
+
     try {
       final response = await http.post(
         Uri.parse('http://localhost:8000/api/resources'),
@@ -86,32 +126,13 @@ class _MapScreenState extends State<MapScreen> {
         body: jsonEncode({'lat': lat, 'lng': lng, 'radius_miles': 25}),
       );
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List resources = data['resources'] ?? [];
-        setState(() {
-          _resourceMarkers = resources.map<Marker>((r) {
-            final type = r['type'] ?? 'shelter';
-            return Marker(
-              point: LatLng(
-                (r['lat'] as num).toDouble(),
-                (r['lng'] as num).toDouble(),
-              ),
-              width: 36,
-              height: 36,
-              child: Tooltip(
-                message: r['name'] ?? type,
-                child: Icon(
-                  _iconForType(type),
-                  color: _colorForType(type),
-                  size: 30,
-                ),
-              ),
-            );
-          }).toList();
-        });
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        await AppCacheService().saveResources(data);
+        final List resources = data['ranked_resources'] ?? [];
+        setState(() => _resourceMarkers = _buildMarkers(resources));
       }
     } catch (e) {
-      print('Resources API error: $e');
+      debugPrint('Resources API error: $e');
     }
   }
 

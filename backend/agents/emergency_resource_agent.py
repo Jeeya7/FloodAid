@@ -150,7 +150,7 @@ def resource_safety_agent(resources: list[dict[str, Any]]) -> dict[str, Any]:
         separators=(",", ":"),
     )
     try:
-        raw = chat(system, user)
+        raw = chat(system, user, max_tokens=400)
         return parse_json_response(raw)
     except Exception as exc:
         result = _fallback_safety(resources)
@@ -175,7 +175,7 @@ def availability_agent(resources: list[dict[str, Any]]) -> dict[str, Any]:
         separators=(",", ":"),
     )
     try:
-        raw = chat(system, user)
+        raw = chat(system, user, max_tokens=400)
         return parse_json_response(raw)
     except Exception as exc:
         result = _fallback_availability(resources)
@@ -287,7 +287,7 @@ def resource_synthesis_agent(
     user = json.dumps(slim, separators=(",", ":"))
 
     try:
-        raw = chat(system, user)
+        raw = chat(system, user, max_tokens=512)
         llm_out    = parse_json_response(raw)
         reasonings: dict[str, str] = llm_out.get("reasonings", {})
         summary: str = llm_out.get("summary", "Resources ranked by flood emergency suitability.")
