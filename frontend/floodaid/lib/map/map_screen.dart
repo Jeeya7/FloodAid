@@ -27,6 +27,17 @@ class _MapScreenState extends State<MapScreen> {
   bool _movedToUser = false;
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.userLocation != null) {
+      _movedToUser = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _mapController.move(widget.userLocation!, 12.0);
+      });
+    }
+  }
+
+  @override
   void didUpdateWidget(MapScreen old) {
     super.didUpdateWidget(old);
     if (!_movedToUser && widget.userLocation != null) {
@@ -38,7 +49,6 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   // ── Risk helpers ──────────────────────────────────────────────────────────
-
   String _overallRiskLevel() {
     final regions = (widget.riskData?['regions'] as List?) ?? [];
     if (regions.isEmpty) return 'low';
@@ -72,7 +82,6 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   // ── Region circle markers ─────────────────────────────────────────────────
-
   List<CircleMarker> _buildRiskCircles() {
     final regions = (widget.riskData?['regions'] as List?) ?? [];
     return regions.map<CircleMarker?>((r) {
@@ -93,7 +102,6 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   // ── Region label markers ──────────────────────────────────────────────────
-
   List<Marker> _buildRiskLabelMarkers() {
     final regions = (widget.riskData?['regions'] as List?) ?? [];
     return regions.map<Marker?>((r) {
@@ -145,29 +153,45 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   // ── Resource markers ──────────────────────────────────────────────────────
-
   List<Marker> _buildResourceMarkers() {
-    // Build coord lookup from recommended_resources which always has lat/lng
-    final Map<String, dynamic> coordLookup = {};
     final rec = widget.resourcesData?['recommended_resources'] ?? {};
+
+    final Map<String, Map<String, dynamic>> allById = {};
     for (final category in ['hospital', 'shelter', 'food']) {
-      for (final r in (rec[category] as List? ?? [])) {
-        if (r['id'] != null) coordLookup[r['id'] as String] = r;
+      final list = rec[category] as List? ?? [];
+      for (final r in list) {
+        final item = Map<String, dynamic>.from(r as Map);
+        item['type'] ??= category;
+        final id = item['id'] as String?;
+        if (id != null) {
+          allById[id] = item;
+        } else {
+          allById['__${category}_${allById.length}'] = item;
+        }
       }
     }
 
-    final List resources = widget.resourcesData?['ranked_resources'] ?? [];
-    return resources.map<Marker?>((r) {
+    final ranked = widget.resourcesData?['ranked_resources'] as List? ?? [];
+    for (final r in ranked) {
+      final item = Map<String, dynamic>.from(r as Map);
+      item['type'] ??= 'unknown';
+      final id = item['id'] as String?;
+      if (id != null && allById.containsKey(id)) {
+        final rLat = (item['lat'] as num?)?.toDouble() ?? 0;
+        final rLng = (item['lng'] as num?)?.toDouble() ?? 0;
+        if (rLat != 0 && rLng != 0) {
+          allById[id]!['lat'] = rLat;
+          allById[id]!['lng'] = rLng;
+        }
+      } else {
+        allById[id ?? '__ranked_${allById.length}'] = item;
+      }
+    }
+
+    return allById.values.map<Marker?>((r) {
       final type = (r['type'] ?? 'unknown') as String;
-      final id = r['id'] as String?;
-
-      // Use ranked_resources coords first, fall back to recommended_resources lookup
-      final source = ((r['lat'] as num?)?.toDouble() ?? 0) != 0
-          ? r
-          : (id != null ? (coordLookup[id] ?? r) : r);
-
-      final lat = (source['lat'] as num?)?.toDouble();
-      final lng = (source['lng'] as num?)?.toDouble();
+      final lat  = (r['lat'] as num?)?.toDouble();
+      final lng  = (r['lng'] as num?)?.toDouble();
 
       if (lat == null || lng == null || (lat == 0 && lng == 0)) return null;
 
@@ -218,7 +242,6 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   // ── Legend ────────────────────────────────────────────────────────────────
-
   Widget _buildLegend() {
     return Positioned(
       bottom: 80,
@@ -243,9 +266,9 @@ class _MapScreenState extends State<MapScreen> {
             const SizedBox(height: 6),
             const Text('Resources', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
-            _legendIcon(Icons.local_hospital, Colors.red, 'Hospital'),
-            _legendIcon(Icons.fastfood, Colors.orange, 'Food'),
-            _legendIcon(Icons.home, Colors.blue, 'Shelter'),
+            _legendIcon(Icons.local_hospital, Colors.red,    'Hospital'),
+            _legendIcon(Icons.fastfood,       Colors.orange, 'Food'),
+            _legendIcon(Icons.home,           Colors.blue,   'Shelter'),
           ],
         ),
       ),
@@ -286,9 +309,9 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final riskLevel = _overallRiskLevel();
-    final riskCircles = _buildRiskCircles();
-    final riskLabels = _buildRiskLabelMarkers();
+    final riskLevel       = _overallRiskLevel();
+    final riskCircles     = _buildRiskCircles();
+    final riskLabels      = _buildRiskLabelMarkers();
     final resourceMarkers = _buildResourceMarkers();
 
     return Scaffold(
@@ -297,8 +320,8 @@ class _MapScreenState extends State<MapScreen> {
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: const LatLng(37.5, -96.0),
-              initialZoom: 4.5,
+              initialCenter: widget.userLocation ?? const LatLng(37.5, -96.0),
+              initialZoom: widget.userLocation != null ? 12.0 : 4.5,
               minZoom: 4.5,
               cameraConstraint: CameraConstraint.containCenter(
                 bounds: LatLngBounds(
