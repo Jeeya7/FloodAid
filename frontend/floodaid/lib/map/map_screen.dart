@@ -30,7 +30,9 @@ class _MapScreenState extends State<MapScreen> {
 
   // tracks whether we've already zoomed to the user's location
   // so we don't keep snapping back every time the widget rebuilds
+  DateTime? _dataReceivedAt;
   bool _movedToUser = false;
+  
 
   @override
   void initState() {
@@ -55,6 +57,10 @@ class _MapScreenState extends State<MapScreen> {
         _mapController.move(widget.userLocation!, 12.0);
       });
     }
+    //if(riskData != null){
+      //_dataReceivedAt = DateTime.now();
+    //}
+    
   }
 
   // ── Risk helpers ──────────────────────────────────────────────────────────
@@ -332,7 +338,13 @@ class _MapScreenState extends State<MapScreen> {
       ),
     );
   }
-
+  int setTime(){
+    if(widget.riskData != null){
+      _dataReceivedAt = DateTime.now();
+    }
+    var diff = DateTime.now().difference(_dataReceivedAt!);
+    return diff.inMinutes;
+  }
   // single row in the legend with an icon and a label
   Widget _legendIcon(IconData icon, Color color, String label) {
     return Padding(
@@ -342,7 +354,7 @@ class _MapScreenState extends State<MapScreen> {
         children: [
           Icon(icon, color: color, size: 14),
           const SizedBox(width: 6),
-          Text(label, style: const TextStyle(fontSize: 10)),
+          Text("test", style: const TextStyle(fontSize: 10)),
         ],
       ),
     );
@@ -417,7 +429,7 @@ class _MapScreenState extends State<MapScreen> {
               color: _colorForRiskLevel(riskLevel),
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               child: Text(
-                _labelForRiskLevel(riskLevel),
+                '${_labelForRiskLevel(riskLevel)} ${setTime()}',
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
