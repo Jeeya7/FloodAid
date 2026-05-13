@@ -7,9 +7,9 @@ from typing import Any
 
 from dotenv import load_dotenv
 
+# try to import requests — if it's not installed we handle it gracefully below
 try:
     import requests
-
     _REQUESTS_AVAILABLE = True
 except ImportError:
     _REQUESTS_AVAILABLE = False
@@ -17,16 +17,17 @@ except ImportError:
 
 load_dotenv()
 
+# load the API key from .env file
 GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY")
 
 GOOGLE_PLACES_URL = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
 
-_TIMEOUT = 10
+_TIMEOUT = 10  # seconds before we give up on the API call
 
 
 def _extract_status(place: dict[str, Any]) -> tuple[str, dict[str, Any]]:
-    """Extract open/closed/unknown status from Google Places opening_hours."""
-
+    # figures out if a place is currently open, closed, or unknown
+    # Google Places gives us open_now as True/False/None
     opening_hours = place.get("opening_hours", {})
     open_now = opening_hours.get("open_now")
 
@@ -35,28 +36,24 @@ def _extract_status(place: dict[str, Any]) -> tuple[str, dict[str, Any]]:
     elif open_now is False:
         status = "closed"
     else:
-        status = "unknown"
+        status = "unknown"  # Google didn't give us hours info
 
     return status, {"open_now": open_now}
 
 
 def _infer_resource_type(name: str) -> str:
-    """Infer resource type from place name."""
-
+    # Google Places doesn't tell us the exact type of food resource
+    # so we guess based on keywords in the name
     lowered = name.lower()
 
     if "food bank" in lowered:
         return "food_bank"
-
     if "meal" in lowered:
         return "meal_site"
-
     if "pantry" in lowered:
         return "pantry"
-
     if "food share" in lowered or "food distribution" in lowered:
         return "pantry"
-
     if "basic needs" in lowered:
         return "pantry"
 
@@ -64,7 +61,8 @@ def _infer_resource_type(name: str) -> str:
 
 
 def _distance_miles(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    """Calculate distance between two lat/lng points in miles."""
+    # haversine formula — calculates straight line distance between two GPS points
+    # we use this to sort results by how close they are to the user
     radius_earth_miles = 3958.8
 
     dlat = math.radians(lat2 - lat1)
@@ -87,10 +85,9 @@ def _normalize_google_place(
     user_lat: float,
     user_lng: float,
 ) -> dict[str, Any]:
-    """Convert one Google Places result into your frontend-ready schema."""
-
+    # converts a raw Google Places result into our standard resource format
+    # this is what the frontend and agents expect to receive
     location = place.get("geometry", {}).get("location", {})
-
     place_lat = float(location.get("lat", 0.0))
     place_lng = float(location.get("lng", 0.0))
 
@@ -101,13 +98,12 @@ def _normalize_google_place(
         "id": place.get("place_id", name),
         "place_id": place.get("place_id", ""),
         "name": name,
-        "type": _infer_resource_type(name),
+        "type": _infer_resource_type(name),  # guessed from the name
         "lat": place_lat,
         "lng": place_lng,
         "address": place.get("vicinity", ""),
         "distance_miles": round(
-            _distance_miles(user_lat, user_lng, place_lat, place_lng),
-            2,
+            _distance_miles(user_lat, user_lng, place_lat, place_lng), 2
         ),
         "status": status,
         "opening_hours": opening_hours,
@@ -126,27 +122,40 @@ def get_food_resources(
 ) -> dict[str, Any]:
     """
     Return nearby food-assistance resources.
-
     Uses Google Places only.
     Returns an empty resource list when the API is unavailable or returns no matches.
     """
 
+    # bail out early if requests library isn't installed
     if not _REQUESTS_AVAILABLE:
         print(f"[food_service] requests library not installed; returning empty result for lat={lat}, lng={lng}")
-        return {"source": "google_places", "using_mock_data": False, "resources": [], "error": "requests library not installed"}
+        return {
+            "source": "google_places",
+            "using_mock_data": False,
+            "resources": [],
+            "error": "requests library not installed",
+        }
 
+    # bail out early if API key is missing from .env
     if not GOOGLE_PLACES_API_KEY:
         print(f"[food_service] GOOGLE_PLACES_API_KEY missing; returning empty result for lat={lat}, lng={lng}")
-        return {"source": "google_places", "using_mock_data": False, "resources": [], "error": "GOOGLE_PLACES_API_KEY missing from .env"}
+        return {
+            "source": "google_places",
+            "using_mock_data": False,
+            "resources": [],
+            "error": "GOOGLE_PLACES_API_KEY missing from .env",
+        }
 
     try:
+        # Google Places max radius is 50,000m so we cap at 25 miles
         radius_meters = int(min(radius_miles, 25) * 1609.34)
 
         print(
-            f"[food_service] Fetching food resources near lat={lat}, lng={lng}, radius={radius_miles}mi "
-            f"({radius_meters}m)"
+            f"[food_service] Fetching food resources near lat={lat}, lng={lng}, "
+            f"radius={radius_miles}mi ({radius_meters}m)"
         )
 
+        # search for food assistance places within the radius
         params = {
             "location": f"{lat},{lng}",
             "radius": radius_meters,
@@ -154,17 +163,13 @@ def get_food_resources(
             "key": GOOGLE_PLACES_API_KEY,
         }
 
-        response = requests.get(
-            GOOGLE_PLACES_URL,
-            params=params,
-            timeout=_TIMEOUT,
-        )
+        response = requests.get(GOOGLE_PLACES_URL, params=params, timeout=_TIMEOUT)
         response.raise_for_status()
 
         data = response.json()
-
         print(f"[food_service] Google Places status={data.get('status')}")
 
+        # anything other than OK or ZERO_RESULTS means something went wrong
         if data.get("status") not in {"OK", "ZERO_RESULTS"}:
             return {
                 "source": "google_places",
@@ -176,6 +181,7 @@ def get_food_resources(
         raw_places = data.get("results", [])
         print(f"[food_service] Google Places returned {len(raw_places)} raw results")
 
+        # log a preview of what we got for debugging
         if raw_places:
             preview = [place.get("name", "") for place in raw_places[:5]]
             print(f"[food_service] Raw place preview: {preview}")
@@ -192,11 +198,13 @@ def get_food_resources(
                 "error": "Google Places returned no food assistance resources",
             }
 
+        # normalize each result into our standard format
         resources = [
             _normalize_google_place(place, lat, lng)
             for place in filtered_places
         ]
 
+        # sort by distance so closest resources show up first
         resources.sort(key=lambda item: item["distance_miles"])
 
         print(f"[food_service] Returning {len(resources)} food resources from Google Places")
